@@ -1,8 +1,21 @@
 import numpy as np
 
-def cov_jk_sensitivity(n):
-    Delta_cov_jk = 4 * (n - 1) / n** 2
+
+def cov_sensitivity_linf(n, d, B):
+    return 6 * d * (n - 1) / n ** 2
+
+
+def cov_sensitivity_l2(n, R):
+    return np.sqrt(2) / n * R ** 2
+
+
+def cov_jk_sensitivity_linf(n, B):
+    Delta_cov_jk = 6 * (n - 1) * B ** 2 / n ** 2
     return Delta_cov_jk
+
+
+def cov_jk_sensitivity_l2(n, R):
+    return R ** 2 / n
 
 
 def exponential_mechanism(off_diag_errors, rho, alpha, Delta_cov_jk, rounds):
@@ -35,6 +48,7 @@ def SSP_covariance(cov_matrix, cov_sensitivity, rho):
 
     # #noise_scale = (2 * np.log(1.25/delta) * cov_sensitivity**2) / epsilon**2
     noise_scale = cov_sensitivity / np.sqrt(2 * rho)
+    print(f"SSP noise scale: {noise_scale}")
 
     # # leveraging scaling property of normal distributions
     # cov_dp = cov_matrix + noise_scale * Zsym
@@ -46,6 +60,21 @@ def SSP_covariance(cov_matrix, cov_sensitivity, rho):
 
 
 def gaussian_mechanism(obj, sensitivity, rho):
+    """
+    Apply the Gaussian mechanism to a function output under zCDP.
+
+    Parameters:
+    - obj: np.array, the output of the function f.
+    - sensitivity: float, the L2 sensitivity of the function f.
+    - rho: float, the zCDP privacy budget.
+
+    Returns:
+    - noisy_obj: np.array, the output of the function f with Gaussian noise added.
+    """
     noise_scale = sensitivity / np.sqrt(2 * rho)
+    print("noise scale MaxEnt: ", noise_scale)
     noise = np.random.normal(0, noise_scale, size=obj.shape)
-    return obj + noise
+
+    noisy_obj = obj + noise
+
+    return noisy_obj

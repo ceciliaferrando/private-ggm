@@ -10,9 +10,9 @@ parser = argparse.ArgumentParser(description="Run covariance matrix estimation e
 # Ensure data path is correctly resolved
 
 
-parser.add_argument("--dataset_name", type=str, required=True, help="name of dataset")
+parser.add_argument("--d", type=int, required=True, help="dimension of synthetic data")
 parser.add_argument("--n_iters", type=int, default=500, help="Number of optimization iterations")
-parser.add_argument("--rho", type=float, default=0.5, help="Differential privacy parameter")
+parser.add_argument("--rho", type=float, default=1.0, help="Differential privacy parameter")
 parser.add_argument("--structure", type=str, default="rndpercent", choices=["chain", "random", "rndpercent"], help="Graph structure")
 parser.add_argument("--apply_dp", action="store_true", help="Apply differential privacy")
 parser.add_argument("--num_trials", type=int, default=10, help="Number of trials")
@@ -20,7 +20,8 @@ parser.add_argument("--verbose", action="store_true", help="Enable verbose outpu
 
 args = parser.parse_args()
 
-data_path = os.path.join(os.path.dirname(__file__), "..", "data", args.dataset_name + ".csv")
+clip_type = "l2"
+rescale = False
 
 # Set seed
 np.random.seed(42)
@@ -32,15 +33,20 @@ SSP_results = []
 # Run experiment with chosen dataset
 for t in range(args.num_trials):
     results = run_driver(
-        data_path=data_path,
+        # data_path=data_path,
+        # bounds_path=bounds_path,
+        n = 1000,
+        d = args.d,
         structure=args.structure,
         structure_dict=None,
         max_iters=args.n_iters,
         iterative=False,
-        max_off_diag_percentage=0.5,
-        apply_dp=args.apply_dp,
+        max_off_diag_percentage=.5,
+        apply_dp=True,
         rho=args.rho,
-        alpha=0.5
+        clip_type=clip_type,
+        rescale=rescale,
+        alpha=None
     )
 
     # Store results
@@ -52,6 +58,12 @@ for t in range(args.num_trials):
     MaxEnt_metric = float(mahalanobis_cov_error(Sigma_true, Sigma_MaxEnt))
     SSP_metric = float(mahalanobis_cov_error(Sigma_true, Sigma_SSP))
 
+    MaxEnt_l2 = float(np.linalg.norm(Sigma_true-Sigma_MaxEnt))
+    SSP_l2 = float(np.linalg.norm(Sigma_true-Sigma_SSP))
+
+    print(f"MaxEnt_l2 {MaxEnt_l2}")
+    print(f"SSP_l2 {SSP_l2}")
+
     print(MaxEnt_metric, SSP_metric)
 
     MaxEnt_results.append(MaxEnt_metric)
@@ -60,4 +72,5 @@ for t in range(args.num_trials):
 print(f"MaxEnt results: {MaxEnt_results}")
 print(f"SSP results: {SSP_results}")
 
-save_results(MaxEnt_results, SSP_results, args.dataset_name)
+suffix = "synthdata" + str(args.d) + clip_type + str(rescale)
+save_results(MaxEnt_results, SSP_results, suffix)

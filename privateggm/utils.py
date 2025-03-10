@@ -178,14 +178,19 @@ def generate_chain_structure(Sigma_true):
     return Sigma_tilde
 
 
+import numpy as np
+
 def generate_random_offdiag_structure(Sigma_true, percentage=0.5):
     """
-    Generate a structure where the covariance matrix has its diagonal
-    entries preserved and 50% of the off-diagonal entries (randomly selected)
-    retained, with the remaining off-diagonal entries set to zero.
+    Generate a structure where the cov matrix has its diagonal
+    entries preserved and a percentage of the lower triangle
+    off-diagonal entries (randomly selected) retained, with the remaining
+    off-diagonal entries set to zero. The lower triangle is then mirrored
+    to the upper triangle to ensure symmetry
 
     Parameters:
     - Sigma_true: np.array, true covariance matrix.
+    - percentage: float, percentage of lower triangle off-diagonal entries to retain (default: 0.5).
 
     Returns:
     - Sigma_tilde: np.array, covariance matrix with random off-diagonals.
@@ -196,14 +201,28 @@ def generate_random_offdiag_structure(Sigma_true, percentage=0.5):
     # Keep the diagonal entries as is
     np.fill_diagonal(Sigma_tilde, np.diag(Sigma_true))
 
-    # Create a random mask for the upper-triangular off-diagonal entries
-    upper_mask = np.triu(np.random.rand(d, d) < percentage, k=1)
+    # Create a mask for the lower triangle (excluding the diagonal)
+    lower_triangle_mask = np.tril(np.ones((d, d), dtype=bool), k=-1)
 
-    # Assign the corresponding values from Sigma_true to Sigma_tilde
-    Sigma_tilde[upper_mask] = Sigma_true[upper_mask]
+    # Flatten the lower triangle mask and get the indices of True values
+    lower_triangle_indices = np.where(lower_triangle_mask.flatten())[0]
 
-    # Mirror the upper triangle to the lower triangle to ensure symmetry
-    Sigma_tilde = Sigma_tilde + Sigma_tilde.T - np.diag(np.diag(Sigma_tilde))
+    # Calculate the number of lower triangle off-diagonal elements to retain
+    num_lower_triangle = len(lower_triangle_indices)
+    num_to_retain = int(percentage * num_lower_triangle)
+
+    # randomly select indices to retain
+    retain_indices = np.random.choice(lower_triangle_indices, size=num_to_retain, replace=False)
+
+    # Create a flattened version of Sigma_tilde and assign the retained values
+    Sigma_tilde_flat = Sigma_tilde.flatten()
+    Sigma_tilde_flat[retain_indices] = Sigma_true.flatten()[retain_indices]
+
+    # Reshape back to the original matrix shape
+    Sigma_tilde = Sigma_tilde_flat.reshape(d, d)
+
+    # mirror the lower triangle to the upper triangle to ensure symmetry
+    Sigma_tilde = np.triu(Sigma_tilde.T) + np.tril(Sigma_tilde, k=-1)  # don't count diag twice
 
     return Sigma_tilde
 
@@ -327,6 +346,7 @@ def mahalanobis_cov_error(Sigma, Sigma_hat):
     Sigma_inv_sqrt = np.linalg.inv(sqrtm(Sigma))
     error_matrix = Sigma_inv_sqrt @ Sigma_hat @ Sigma_inv_sqrt - np.eye(Sigma.shape[0])
     fro_norm = np.linalg.norm(error_matrix, ord="fro")
+
     return fro_norm
 
 

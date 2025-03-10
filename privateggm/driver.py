@@ -1,10 +1,13 @@
+import os
+
 from privateggm.data import *
 from privateggm.utils import *
 from privateggm.model import *
 from privateggm.privacy import *
 
-def run_driver(data_path, structure='custom', structure_dict=None, max_iters=50,
-               iterative=False, max_off_diag_percentage=0.5, apply_dp=False, rho=None, alpha=None):
+def run_driver(n, d, structure='custom', structure_dict=None, max_iters=50,
+               iterative=False, max_off_diag_percentage=0.5, apply_dp=False, rho=None,
+               clip_type="l2", rescale=True, alpha=None):
     """
     General driver function for processing different datasets with flexible off-diagonal configurations.
 
@@ -20,8 +23,21 @@ def run_driver(data_path, structure='custom', structure_dict=None, max_iters=50,
     - results_dict: dict, contains mse, gradient values, objective values, and other metadata.
     """
 
+    outdir = "data/"
+
+    # Generate data
+    print("rescale?", rescale)
+    generate_well_conditioned_gaussian(outdir, n, d, rescale=rescale, cond_max=10.0)
+    data_path = os.path.join(os.path.dirname(__file__), "..", "data",
+                             "synthdata" + str(d) + "rescale" + str(rescale) + ".csv")
+    bounds_path = os.path.join(os.path.dirname(__file__), "..", "data", "L_bounds_rescale" + str(rescale) + ".json")
+
     # Load and process data
-    data, n, d, Sigma_true, T = load_and_process_data(data_path)
+    data, n, d, Sigma_true, T = load_and_process_data(data_path, bounds_path, clip_type=clip_type)
+
+    print(data.head)
+
+    print("T", T)
 
     # Define different structures
     if structure == 'chain':
@@ -38,12 +54,12 @@ def run_driver(data_path, structure='custom', structure_dict=None, max_iters=50,
         results_dict = run_iterative_mode(n, Sigma_true, Sigma_tilde, max_iters, max_off_diag_percentage, apply_dp, rho,
                                           alpha)
     else:
-        results_dict = run_non_iterative_mode(n, T, Sigma_true, Sigma_tilde, max_iters, apply_dp, rho, alpha)
+        results_dict = run_non_iterative_mode(n, T, Sigma_true, Sigma_tilde, max_iters, apply_dp, rho, clip_type, alpha)
 
     return results_dict
 
 
-def run_non_iterative_mode(n, T, Sigma_true, Sigma_tilde, max_iters, apply_dp, rho, alpha):
+def run_non_iterative_mode(n, T, Sigma_true, Sigma_tilde, max_iters, apply_dp, rho, clip_type, alpha):
     """
     Run the driver in non-iterative mode.
     """
@@ -54,15 +70,18 @@ def run_non_iterative_mode(n, T, Sigma_true, Sigma_tilde, max_iters, apply_dp, r
     Sigma_tilde_vec = Sigma_tilde[rows, cols]
 
     if apply_dp:
-        Delta_cov_jk = cov_jk_sensitivity(n)
+        if clip_type == 'linf':
+            Delta_cov_jk = cov_jk_sensitivity_linf(n, T)
+        elif clip_type == 'l2':
+            Delta_cov_jk = cov_jk_sensitivity_l2(n, T)
         # distribute budged across all observed Sigma_tilde entries
-        rho_per_entry = rho / len(inds)
-        Sigma_tilde_vec_dp = gaussian_mechanism(Sigma_tilde_vec, Delta_cov_jk, rho_per_entry)
-        Sigma_tilde = reconstruct_sigma_tilde(inds, Sigma_tilde_vec_dp, d)
+        lowertri_inds_num = len(inds)/2  # we only need to privatize the lower triangle elements, they will get mirrored
+        rho_per_entry = rho / lowertri_inds_num
+        Sigma_tilde_vec = gaussian_mechanism(Sigma_tilde_vec, Delta_cov_jk, rho_per_entry)
+        Sigma_tilde = reconstruct_sigma_tilde(inds, Sigma_tilde_vec, d)
 
     # initialize z
     z_init = initialize_z(Sigma_tilde, inds)
-    K_z_init = get_K(z_init, inds, d)
 
     # optimize using LBFGS
     z_opt, g_vals, obj_vals = optimize_lbfgs(Sigma_tilde_vec, z_init, inds, d, max_iters=max_iters)
@@ -76,7 +95,10 @@ def run_non_iterative_mode(n, T, Sigma_true, Sigma_tilde, max_iters, apply_dp, r
                     'Sigma_true': Sigma_true, 'Sigma_tilde': Sigma_tilde, 'Sigma_opt': Sigma_opt}
 
     # add SSP baseline
-    cov_sensitivity = np.sqrt(2) / n * T ** 2
+    if clip_type == 'l2':
+        cov_sensitivity = cov_sensitivity_l2(n, T)
+    elif clip_type == 'linf':
+        cov_sensitivity = cov_sensitivity_linf(n, d, 1) # unit ball
     Sigma_SSP = SSP_covariance(Sigma_true, cov_sensitivity, rho)
 
     results_dict['Sigma_SSP'] = Sigma_SSP
