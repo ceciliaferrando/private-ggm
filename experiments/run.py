@@ -22,7 +22,7 @@ args = parser.parse_args()
 
 clip_type = "l2"
 rescale = True
-offdiagpct = 1.
+offdiagpct = 0.5
 np.random.seed(3)
 
 # Results storage

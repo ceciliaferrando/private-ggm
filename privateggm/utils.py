@@ -399,4 +399,3 @@ def mahalanobis_cov_error(Sigma, Sigma_hat):
 #     plot_filename = os.path.join(results_dir, f"{dataset_name}_mahalanobis_plot.png")
 #     plt.savefig(plot_filename, dpi=300, bbox_inches='tight')
 #     print(f"Plot saved to {plot_filename}")
-
