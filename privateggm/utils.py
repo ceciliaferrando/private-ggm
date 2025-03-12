@@ -10,6 +10,7 @@ from jax.scipy.linalg import sqrtm
 
 import matplotlib.pyplot as plt
 
+DEBUG_MODE = True
 
 def get_K(z, inds, d):
     """
@@ -350,51 +351,52 @@ def mahalanobis_cov_error(Sigma, Sigma_hat):
     return fro_norm
 
 
-def save_results(MaxEnt_results, SSP_results, dataset_name):
-    """
-    Saves Mahalanobis errors for MaxEnt and SSP to a JSON file.
-    Also saves a plot comparing the errors.
+# def save_results(MaxEnt_results, SSP_results, dataset_name):
+#     """
+#     Saves Mahalanobis errors for MaxEnt and SSP to a JSON file.
+#     Also saves a plot comparing the errors.
+#
+#     Args:
+#     - MaxEnt_results: List of Mahalanobis errors for MaxEnt.
+#     - SSP_results: List of Mahalanobis errors for SSP.
+#     - dataset_name: Name of the dataset (used for filenames).
+#     """
+#
+#     # Ensure results directory exists
+#     results_dir = "results"
+#     os.makedirs(results_dir, exist_ok=True)
+#
+#     # === Save Error Vectors as JSON ===
+#     output_filename = os.path.join(results_dir, f"{dataset_name}_mahalanobis_errors.json")
+#     results_dict = {
+#         "MaxEnt_Mahalanobis": np.array(MaxEnt_results).tolist(),
+#         "SSP_Mahalanobis": np.array(SSP_results).tolist()
+#     }
+#     with open(output_filename, "w") as f:
+#         json.dump(results_dict, f, indent=4)
+#     print(f"Mahalanobis errors saved to {output_filename}")
+#
+#     # === Plot Mahalanobis Errors ===
+#     mean_maxent = np.mean(MaxEnt_results)
+#     mean_ssp = np.mean(SSP_results)
+#     trials = range(1, len(MaxEnt_results) + 1)
+#
+#     plt.figure(figsize=(6, 5))
+#     plt.scatter(trials, MaxEnt_results, marker='o', label='MaxEnt Mahalanobis Error', color='blue')
+#     plt.scatter(trials, SSP_results, marker='o', label='SSP Mahalanobis Error', color='orange')
+#
+#     plt.axhline(mean_maxent, color='blue', linestyle='--', label=f'Mean MaxEnt: {mean_maxent:.2e}')
+#     plt.axhline(mean_ssp, color='orange', linestyle='--', label=f'Mean SSP: {mean_ssp:.2e}')
+#
+#     plt.xlabel('Trial')
+#     plt.ylabel('Mahalanobis Error')
+#     plt.title(f'MaxEnt vs SSP Mahalanobis Error ({dataset_name})')
+#     plt.yscale('log')
+#     plt.legend()
+#     plt.grid(True, which="both", linestyle="--", linewidth=0.5)
+#
+#     # === Save Plot ===
+#     plot_filename = os.path.join(results_dir, f"{dataset_name}_mahalanobis_plot.png")
+#     plt.savefig(plot_filename, dpi=300, bbox_inches='tight')
+#     print(f"Plot saved to {plot_filename}")
 
-    Args:
-    - MaxEnt_results: List of Mahalanobis errors for MaxEnt.
-    - SSP_results: List of Mahalanobis errors for SSP.
-    - dataset_name: Name of the dataset (used for filenames).
-    """
-
-    # Ensure results directory exists
-    results_dir = "results"
-    os.makedirs(results_dir, exist_ok=True)
-
-    # === Save Error Vectors as JSON ===
-    output_filename = os.path.join(results_dir, f"{dataset_name}_mahalanobis_errors.json")
-    results_dict = {
-        "MaxEnt_Mahalanobis": np.array(MaxEnt_results).tolist(),
-        "SSP_Mahalanobis": np.array(SSP_results).tolist()
-    }
-    with open(output_filename, "w") as f:
-        json.dump(results_dict, f, indent=4)
-    print(f"Mahalanobis errors saved to {output_filename}")
-
-    # === Plot Mahalanobis Errors ===
-    mean_maxent = np.mean(MaxEnt_results)
-    mean_ssp = np.mean(SSP_results)
-    trials = range(1, len(MaxEnt_results) + 1)
-
-    plt.figure(figsize=(6, 5))
-    plt.scatter(trials, MaxEnt_results, marker='o', label='MaxEnt Mahalanobis Error', color='blue')
-    plt.scatter(trials, SSP_results, marker='o', label='SSP Mahalanobis Error', color='orange')
-
-    plt.axhline(mean_maxent, color='blue', linestyle='--', label=f'Mean MaxEnt: {mean_maxent:.2e}')
-    plt.axhline(mean_ssp, color='orange', linestyle='--', label=f'Mean SSP: {mean_ssp:.2e}')
-
-    plt.xlabel('Trial')
-    plt.ylabel('Mahalanobis Error')
-    plt.title(f'MaxEnt vs SSP Mahalanobis Error ({dataset_name})')
-    plt.yscale('log')
-    plt.legend()
-    plt.grid(True, which="both", linestyle="--", linewidth=0.5)
-
-    # === Save Plot ===
-    plot_filename = os.path.join(results_dir, f"{dataset_name}_mahalanobis_plot.png")
-    plt.savefig(plot_filename, dpi=300, bbox_inches='tight')
-    print(f"Plot saved to {plot_filename}")

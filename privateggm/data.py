@@ -4,7 +4,7 @@ import os
 import json
 from sklearn.preprocessing import MinMaxScaler
 
-def generate_well_conditioned_gaussian(outdir, n_samples, d, rescale=True, cond_max=10.0):
+def generate_well_conditioned_gaussian(outdir, n_samples, d, rescale, cond_max=10.0):
     """
     Generates synthetic multivariate Gaussian data with a well-conditioned SPD covariance matrix.
 
@@ -34,20 +34,24 @@ def generate_well_conditioned_gaussian(outdir, n_samples, d, rescale=True, cond_
 
     if rescale:
         df = rescale_data(df)
+        L2_bound = 2 * np.sqrt(d)
+        print("L2 bound at origin", L2_bound)
+        Linf_bound = 1
 
     print("saving this data:", df)
 
     data_path = os.path.join(outdir, f"synthdata{d}rescale{rescale}.csv")
     df.to_csv(data_path, index=False)
 
-    # Re-simulate the data to get data bound
-    surrogate_X = np.random.multivariate_normal(mean=mu, cov=Sigma, size=n_samples)
+    if not rescale:
+        # Re-simulate the data to get data bound
+        surrogate_X = np.random.multivariate_normal(mean=mu, cov=Sigma, size=n_samples)
 
-    # get L2 bound on row entries of surrogate_X
-    L2_bound = np.linalg.norm(surrogate_X, axis=1).max()
+        # get L2 bound on row entries of surrogate_X
+        L2_bound = np.linalg.norm(surrogate_X, axis=1).max()
 
-    # get L_infinity bound on row entries of surrogate_X
-    Linf_bound = np.max(np.abs(surrogate_X))
+        # get L_infinity bound on row entries of surrogate_X
+        Linf_bound = np.max(np.abs(surrogate_X))
 
     # Save L2 and L_infinity values to a file (e.g., in a JSON file)
     bounds_path = os.path.join(outdir, f"L_bounds_rescale{rescale}.json")
@@ -121,7 +125,6 @@ def load_and_process_data(data_path, bounds_path, clip_type="linf"):
 
     # Convert the DataFrame to a numpy array.
     X = data.to_numpy()
-    print("Pre clip X", X)
 
     # Clip the data according to the chosen norm.
     if clip_type.lower() == "l2":
@@ -135,8 +138,6 @@ def load_and_process_data(data_path, bounds_path, clip_type="linf"):
 
     # Replace the data in the DataFrame with the clipped values.
     data = pd.DataFrame(X_clipped, columns=data.columns)
-
-    print("Post clip X", data)
 
     print(f"Data loaded from {data_path}")
     print(f"Dimension: {d}, Number of samples: {n}")

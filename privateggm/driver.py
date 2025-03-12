@@ -35,8 +35,6 @@ def run_driver(n, d, structure='custom', structure_dict=None, max_iters=50,
     # Load and process data
     data, n, d, Sigma_true, T = load_and_process_data(data_path, bounds_path, clip_type=clip_type)
 
-    print(data.head)
-
     print("T", T)
 
     # Define different structures
@@ -54,12 +52,12 @@ def run_driver(n, d, structure='custom', structure_dict=None, max_iters=50,
         results_dict = run_iterative_mode(n, Sigma_true, Sigma_tilde, max_iters, max_off_diag_percentage, apply_dp, rho,
                                           alpha)
     else:
-        results_dict = run_non_iterative_mode(n, T, Sigma_true, Sigma_tilde, max_iters, apply_dp, rho, clip_type, alpha)
+        results_dict = run_non_iterative_mode(n, T, Sigma_true, Sigma_tilde, max_iters, apply_dp, rho, clip_type)
 
     return results_dict
 
 
-def run_non_iterative_mode(n, T, Sigma_true, Sigma_tilde, max_iters, apply_dp, rho, clip_type, alpha):
+def run_non_iterative_mode(n, T, Sigma_true, Sigma_tilde, max_iters, apply_dp, rho, clip_type):
     """
     Run the driver in non-iterative mode.
     """
@@ -74,11 +72,7 @@ def run_non_iterative_mode(n, T, Sigma_true, Sigma_tilde, max_iters, apply_dp, r
             Delta_cov_jk = cov_jk_sensitivity_linf(n, T)
         elif clip_type == 'l2':
             Delta_cov_jk = cov_jk_sensitivity_l2(n, T)
-        # distribute budged across all observed Sigma_tilde entries
-        lowertri_inds_num = len(inds)/2  # we only need to privatize the lower triangle elements, they will get mirrored
-        rho_per_entry = rho / lowertri_inds_num
-        Sigma_tilde_vec = gaussian_mechanism(Sigma_tilde_vec, Delta_cov_jk, rho_per_entry)
-        Sigma_tilde = reconstruct_sigma_tilde(inds, Sigma_tilde_vec, d)
+        Sigma_tilde, Sigma_tilde_vec = privatize_Sigma_tilde(Sigma_tilde_vec, inds, d, Delta_cov_jk, rho)
 
     # initialize z
     z_init = initialize_z(Sigma_tilde, inds)
@@ -99,6 +93,7 @@ def run_non_iterative_mode(n, T, Sigma_true, Sigma_tilde, max_iters, apply_dp, r
         cov_sensitivity = cov_sensitivity_l2(n, T)
     elif clip_type == 'linf':
         cov_sensitivity = cov_sensitivity_linf(n, d, 1) # unit ball
+    print("SSP sensitivity", cov_sensitivity)
     Sigma_SSP = SSP_covariance(Sigma_true, cov_sensitivity, rho)
 
     results_dict['Sigma_SSP'] = Sigma_SSP

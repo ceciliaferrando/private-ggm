@@ -1,8 +1,9 @@
 import numpy as np
+from privateggm.utils import *
 
 
 def cov_sensitivity_linf(n, d, B):
-    return 6 * d * (n - 1) / n ** 2
+    return 6 * d * (n - 1) * B**2 / n ** 2
 
 
 def cov_sensitivity_l2(n, R):
@@ -78,3 +79,34 @@ def gaussian_mechanism(obj, sensitivity, rho):
     noisy_obj = obj + noise
 
     return noisy_obj
+
+
+def privatize_Sigma_tilde(Sigma_tilde_vec, inds, d, Delta_cov_jk, rho):
+    """
+    Privatize the entries of a covariance matrix using the Gaussian mechanism.
+
+    Parameters:
+    - Sigma_tilde_vec: np.array, the vectorized version of the covariance matrix.
+    - inds: np.array, the indices of the lower triangle elements.
+    - d: int, the dimension of the covariance matrix.
+    - Delta_cov_jk: float, the sensitivity of the covariance matrix entries.
+    - rho: float, the total privacy budget (zCDP).
+
+    Returns:
+    - Sigma_tilde: np.array, the privatized covariance matrix.
+    """
+    # Distribute budget across all observed Sigma_tilde entries
+    lowertri_inds_num = len(inds) // 2  # Only need to privatize lower triangle elements
+    rho_per_entry = rho / lowertri_inds_num
+
+    # Apply the Gaussian mechanism to privatize the entries
+    print("MAXENT SENSITIVITY", Delta_cov_jk)
+    Sigma_tilde_vec = gaussian_mechanism(Sigma_tilde_vec, Delta_cov_jk, rho_per_entry)
+
+    # Reconstruct the full covariance matrix from the vectorized version
+    Sigma_tilde = reconstruct_sigma_tilde(inds, Sigma_tilde_vec, d)
+
+    # Ensure the matrix is symmetric
+    assert np.allclose(Sigma_tilde, Sigma_tilde.T), "Sigma_tilde is not symmetric"
+
+    return Sigma_tilde, Sigma_tilde_vec
