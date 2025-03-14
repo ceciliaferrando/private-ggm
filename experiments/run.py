@@ -3,6 +3,7 @@ import os
 import numpy as np
 from privateggm.driver import run_driver
 from privateggm.utils import *
+from privateggm.data import *
 
 # Argument parser for flexible experiment configuration
 parser = argparse.ArgumentParser(description="Run covariance matrix estimation experiment.")
@@ -12,7 +13,7 @@ parser = argparse.ArgumentParser(description="Run covariance matrix estimation e
 
 parser.add_argument("--d", type=int, required=True, help="dimension of synthetic data")
 parser.add_argument("--n_iters", type=int, default=500, help="Number of optimization iterations")
-parser.add_argument("--rho", type=float, default=1e12, help="Differential privacy parameter")
+parser.add_argument("--rho", type=float, default=1.0, help="Differential privacy parameter")
 parser.add_argument("--structure", type=str, default="rndpercent", choices=["chain", "random", "rndpercent"], help="Graph structure")
 parser.add_argument("--apply_dp", action="store_true", help="Apply differential privacy")
 parser.add_argument("--num_trials", type=int, default=10, help="Number of trials")
@@ -20,10 +21,12 @@ parser.add_argument("--verbose", action="store_true", help="Enable verbose outpu
 
 args = parser.parse_args()
 
-clip_type = "l2"
+clip_type = "linf"
 rescale = True
 offdiagpct = 0.5
-np.random.seed(3)
+
+# set rng
+rng = np.random.default_rng(seed=42)
 
 # Results storage
 results_dict = {
@@ -35,11 +38,23 @@ results_dict = {
     "SSP_mse": []
 }
 
+# Generate data
+outdir = "data/"
+generate_well_conditioned_gaussian(outdir, 1000, args.d, rescale=rescale, cond_max=10.0)
+data_path = os.path.join(os.path.dirname(__file__), "..", "data",
+                         "synthdata" + str(args.d) + "rescale" + str(rescale) + ".csv")
+bounds_path = os.path.join(os.path.dirname(__file__), "..", "data", "L_bounds_rescale" + str(rescale) + ".json")
+
+# Load and process data
+data, _, _, Sigma_true, T = load_and_process_data(data_path, bounds_path, clip_type=clip_type)
+
 # Run experiment across multiple trials
 for t in range(args.num_trials):
+    t_seed =
     results = run_driver(
-        n=1000,
-        d=args.d,
+        data=data,
+        Sigma_true=Sigma_true,
+        T=T,
         structure=args.structure,
         structure_dict=None,
         max_iters=args.n_iters,

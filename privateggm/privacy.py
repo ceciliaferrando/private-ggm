@@ -3,7 +3,7 @@ from privateggm.utils import *
 
 
 def cov_sensitivity_linf(n, d, B):
-    return 6 * d * (n - 1) * B**2 / n ** 2
+    return np.sqrt(2) * d * B**2 / n
 
 
 def cov_sensitivity_l2(n, R):
@@ -11,7 +11,7 @@ def cov_sensitivity_l2(n, R):
 
 
 def cov_jk_sensitivity_linf(n, B):
-    Delta_cov_jk = 6 * (n - 1) * B ** 2 / n ** 2
+    Delta_cov_jk = np.sqrt(2) * B**2 / n
     return Delta_cov_jk
 
 

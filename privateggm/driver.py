@@ -5,7 +5,7 @@ from privateggm.utils import *
 from privateggm.model import *
 from privateggm.privacy import *
 
-def run_driver(n, d, structure='custom', structure_dict=None, max_iters=50,
+def run_driver(data, Sigma_true, T, structure='custom', structure_dict=None, max_iters=50,
                iterative=False, max_off_diag_percentage=0.5, apply_dp=False, rho=None,
                clip_type="l2", rescale=True, alpha=None):
     """
@@ -23,20 +23,7 @@ def run_driver(n, d, structure='custom', structure_dict=None, max_iters=50,
     - results_dict: dict, contains mse, gradient values, objective values, and other metadata.
     """
 
-    outdir = "data/"
-
-    # Generate data
-    print("rescale?", rescale)
-    generate_well_conditioned_gaussian(outdir, n, d, rescale=rescale, cond_max=10.0)
-    data_path = os.path.join(os.path.dirname(__file__), "..", "data",
-                             "synthdata" + str(d) + "rescale" + str(rescale) + ".csv")
-    bounds_path = os.path.join(os.path.dirname(__file__), "..", "data", "L_bounds_rescale" + str(rescale) + ".json")
-
-    # Load and process data
-    data, n, d, Sigma_true, T = load_and_process_data(data_path, bounds_path, clip_type=clip_type)
-
-    print("T", T)
-
+    n, d = data.shape
     # Define different structures
     if structure == 'chain':
         Sigma_tilde = generate_chain_structure(Sigma_true)
