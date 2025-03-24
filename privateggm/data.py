@@ -4,7 +4,7 @@ import os
 import json
 from sklearn.preprocessing import MinMaxScaler
 
-def generate_well_conditioned_gaussian(outdir, n_samples, d, rescale, cond_max=10.0):
+def generate_well_conditioned_gaussian(rng, outdir, n_samples, d, rescale, cond_max=10.0):
     """
     Generates synthetic multivariate Gaussian data with a well-conditioned SPD covariance matrix.
 
@@ -22,30 +22,31 @@ def generate_well_conditioned_gaussian(outdir, n_samples, d, rescale, cond_max=1
     # Generate a random mean vector
     mu = np.zeros((d,))
 
-    # Generate a random SPD covariance matrix using Q Lambda Q^T
-    Q, _ = np.linalg.qr(np.random.randn(d, d))  # Random orthogonal matrix
-    eigvals = np.exp(np.random.randn(d))  # Ensure positive eigenvalues
+    random_matrix = rng.random((d, d))
+    # Perform QR decomposition to get a random orthogonal matrix
+    Q, _ = np.linalg.qr(random_matrix)
+    eigvals = np.exp(rng.random(d))  # Ensure positive eigenvalues
     eigvals = np.clip(eigvals, 1.0 / cond_max, cond_max)  # Restrict condition number
     Sigma = Q @ np.diag(eigvals) @ Q.T  # Construct SPD covariance matrix
 
     # Generate and save multivariate Gaussian data
-    X = np.random.multivariate_normal(mean=mu, cov=Sigma, size=n_samples)
+    X = rng.multivariate_normal(mean=mu, cov=Sigma, size=n_samples)
     df = pd.DataFrame(X, columns=[f"Feature_{i+1}" for i in range(d)])
 
     if rescale:
         df = rescale_data(df)
         L2_bound = 2 * np.sqrt(d)
-        print("L2 bound at origin", L2_bound)
+        #print("L2 bound at origin", L2_bound)
         Linf_bound = 1
 
-    print("saving this data:", df)
+    #print("saving this data:", df)
 
     data_path = os.path.join(outdir, f"synthdata{d}rescale{rescale}.csv")
     df.to_csv(data_path, index=False)
 
     if not rescale:
         # Re-simulate the data to get data bound
-        surrogate_X = np.random.multivariate_normal(mean=mu, cov=Sigma, size=n_samples)
+        surrogate_X = rng.multivariate_normal(mean=mu, cov=Sigma, size=n_samples)
 
         # get L2 bound on row entries of surrogate_X
         L2_bound = np.linalg.norm(surrogate_X, axis=1).max()
@@ -63,13 +64,13 @@ def generate_well_conditioned_gaussian(outdir, n_samples, d, rescale, cond_max=1
 
     bounds[str(d)] = {"l2": float(L2_bound), "linf": float(Linf_bound)}
 
-    print("bounds", L2_bound, Linf_bound)
+    #print("bounds", L2_bound, Linf_bound)
 
     with open(bounds_path, "w") as f:
         json.dump(bounds, f, indent=4)
 
-    print(f"Data saved to {data_path}")
-    print(f"L2 and Linf values for {d}-dimensional data saved to {bounds_path}")
+    #print(f"Data saved to {data_path}")
+    #print(f"L2 and Linf values for {d}-dimensional data saved to {bounds_path}")
 
     return df
 
@@ -139,9 +140,9 @@ def load_and_process_data(data_path, bounds_path, clip_type="linf"):
     # Replace the data in the DataFrame with the clipped values.
     data = pd.DataFrame(X_clipped, columns=data.columns)
 
-    print(f"Data loaded from {data_path}")
-    print(f"Dimension: {d}, Number of samples: {n}")
-    print(f"Using {clip_type.upper()} clipping with bound T = {T}")
-    print("Covariance matrix computed and data clipped.")
+    # print(f"Data loaded from {data_path}")
+    # print(f"Dimension: {d}, Number of samples: {n}")
+    # print(f"Using {clip_type.upper()} clipping with bound T = {T}")
+    # print("Covariance matrix computed and data clipped.")
 
     return data, n, d, Sigma_true, T

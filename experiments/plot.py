@@ -58,39 +58,49 @@ import seaborn as sns
 #         plt.close()
 
 
-def plot_results(results_dir, dataset_name, d_values):
+def plot_results(results_dir, dataset_name, x_values, x_axis="d"):
     """
-    Reads JSON files containing error metrics and plots results across dimensions with empirical error bands using seaborn.
+    Reads JSON files containing error metrics and plots results across dimensions or rho values
+    with empirical error bands using seaborn.
 
     Args:
     - results_dir: Path to the directory containing JSON files.
     - dataset_name: Name of the dataset (used for filenames).
-    - d_values: List of dimensions to include in the plots.
+    - x_values: List of values (either dimensions `d` or `rho`) to include in the plots.
+    - x_axis: The variable to use on the x-axis. Either "d" or "rho".
     """
 
     # Load JSON files from the results directory
     json_files = [os.path.join(results_dir, f) for f in os.listdir(results_dir) if f.endswith(".json")]
     results_dict = {}
+
     for json_file in json_files:
         with open(json_file, "r") as f:
             data = json.load(f)
-            # Extract dimension from filename (assumes naming convention includes '_d<dimension>_')
-            d_key = int(json_file.split("_d")[1].split("_")[0])
-            results_dict[d_key] = data
+
+            # Extract x-axis variable from filename
+            if x_axis == "d":
+                key = int(json_file.split("_d")[1].split("_")[0])  # Extract dimension d
+            elif x_axis == "rho":
+                key = float(json_file.split("_rho")[2].split("_")[0])  # Extract rho
+            else:
+                raise ValueError("x_axis must be either 'd' or 'rho'.")
+
+            results_dict[key] = data
 
     metrics = ["mahalanobis", "l2", "mse"]
     for metric in metrics:
         # Create a list to store raw data for seaborn
         data_list = []
-        for d in d_values:
-            if d in results_dict:
+        for x in x_values:
+            if x in results_dict:
                 for method in ['MaxEnt', 'SSP']:
                     # Get the list of error measurements for the current method and metric
-                    values = results_dict[d][f"{method}_{metric}"]
-                    # Append each measurement along with its associated dimension and method
+                    values = results_dict[x][f"{method}_{metric}"]
+                    # Append each measurement along with its associated x value and method
                     for val in values:
                         data_list.append({
-                            'd': d,
+                            x_axis: x,
                             'Error': val,
                             'Method': method
                         })
@@ -101,23 +111,23 @@ def plot_results(results_dir, dataset_name, d_values):
         # Set up the figure
         plt.figure(figsize=(8, 6))
         # Use seaborn lineplot to automatically compute and plot the confidence interval bands.
-        # The 'ci' parameter controls the confidence interval; you can set it to an integer (e.g., 95) or "sd" to use standard deviation.
-        sns.lineplot(data=df, x="d", y="Error", hue="Method", ci=95, marker="o")
+        sns.lineplot(data=df, x=x_axis, y="Error", hue="Method", errorbar=('ci', 95), marker="o")
 
-        plt.xlabel('d')
+        plt.xlabel(x_axis)
         plt.ylabel(f'{metric.upper()} Error')
-        plt.title(f'MaxEnt vs SSP {metric.upper()} Error Across Dimensions')
+        plt.title(f'MaxEnt vs SSP {metric.upper()} error across {x_axis.lower()}')
         plt.yscale('log')
         plt.grid(True, which="both", linestyle="--", linewidth=0.5)
 
         # Save the plot
-        plot_filename = os.path.join(results_dir, f"{dataset_name}_{metric}_plot.png")
+        plot_filename = os.path.join(results_dir, f"{dataset_name}_{metric}_vs_{x_axis}.png")
         plt.savefig(plot_filename, dpi=300, bbox_inches='tight')
         print(f"Plot saved to {plot_filename}")
         plt.close()
 
 
-results_dir = "results/linf/"
+results_dir = "results/rho1off50seed/"
 dataset_name = "synthdata"
-d_values = [2, 5, 10, 20, 50]
-plot_results(results_dir, dataset_name, d_values)
+d_values = [2, 5, 10, 20, 30, 40, 50]
+rho_values = [0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
+plot_results(results_dir, dataset_name, d_values, x_axis="d")

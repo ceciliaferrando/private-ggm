@@ -29,7 +29,7 @@ def exponential_mechanism(off_diag_errors, rho, alpha, Delta_cov_jk, rounds):
 
     # compute normalizd probabilities using log-probabilities
     off_diag_probabilities = np.exp(log_unnorm_probabilities - log_prob_sum)
-    print("off_diag_probabilities", off_diag_probabilities)
+    #print("off_diag_probabilities", off_diag_probabilities)
 
     # select
     worst_off_diag_index = np.random.choice(len(off_diag_errors), p=off_diag_probabilities)
@@ -60,7 +60,7 @@ def SSP_covariance(cov_matrix, cov_sensitivity, rho):
     return cov_dp
 
 
-def gaussian_mechanism(obj, sensitivity, rho):
+def gaussian_mechanism(rng, obj, sensitivity, rho):
     """
     Apply the Gaussian mechanism to a function output under zCDP.
 
@@ -74,14 +74,14 @@ def gaussian_mechanism(obj, sensitivity, rho):
     """
     noise_scale = sensitivity / np.sqrt(2 * rho)
     print("noise scale MaxEnt: ", noise_scale)
-    noise = np.random.normal(0, noise_scale, size=obj.shape)
+    noise = rng.normal(0, noise_scale, size=obj.shape)
 
     noisy_obj = obj + noise
 
     return noisy_obj
 
 
-def privatize_Sigma_tilde(Sigma_tilde_vec, inds, d, Delta_cov_jk, rho):
+def privatize_Sigma_tilde(rng, Sigma_tilde_vec, inds, d, Delta_cov_jk, rho):
     """
     Privatize the entries of a covariance matrix using the Gaussian mechanism.
 
@@ -100,13 +100,29 @@ def privatize_Sigma_tilde(Sigma_tilde_vec, inds, d, Delta_cov_jk, rho):
     rho_per_entry = rho / lowertri_inds_num
 
     # Apply the Gaussian mechanism to privatize the entries
-    print("MAXENT SENSITIVITY", Delta_cov_jk)
-    Sigma_tilde_vec = gaussian_mechanism(Sigma_tilde_vec, Delta_cov_jk, rho_per_entry)
+    #print("MAXENT SENSITIVITY", Delta_cov_jk)
+    Sigma_tilde_vec_dp = gaussian_mechanism(rng, Sigma_tilde_vec, Delta_cov_jk, rho_per_entry)
 
     # Reconstruct the full covariance matrix from the vectorized version
-    Sigma_tilde = reconstruct_sigma_tilde(inds, Sigma_tilde_vec, d)
+    Sigma_tilde_dp = reconstruct_sigma_tilde(inds, Sigma_tilde_vec_dp, d)
+
+    eigvals = np.linalg.eigvalsh(Sigma_tilde_dp)
+    min_eigval = np.min(eigvals)
+    max_eigval = np.max(eigvals)
+    cond_number = max_eigval / min_eigval if min_eigval > 1e-10 else np.inf
+
+    is_non_pd = not jnp.all(eigvals > 0)
+    is_ill_conditioned = cond_number > 1e10
+    is_nearly_singular = min_eigval < 1e-8
+
+    if is_non_pd or is_ill_conditioned or is_nearly_singular:
+        print("0. PROBLEM DETECTED WITH Sigma:")
+        print(f"0. is_non_pd? {is_non_pd}")
+        print(f"0. is_ill_conditioned? {is_ill_conditioned}")
+        print(f"0. is_nearly_singular? {is_nearly_singular}")
+        #print(Sigma_tilde_dp)
 
     # Ensure the matrix is symmetric
-    assert np.allclose(Sigma_tilde, Sigma_tilde.T), "Sigma_tilde is not symmetric"
+    assert np.allclose(Sigma_tilde_dp, Sigma_tilde_dp.T), "Sigma_tilde is not symmetric"
 
-    return Sigma_tilde, Sigma_tilde_vec
+    return Sigma_tilde_dp, Sigma_tilde_vec_dp

@@ -16,17 +16,18 @@ parser.add_argument("--n_iters", type=int, default=500, help="Number of optimiza
 parser.add_argument("--rho", type=float, default=1.0, help="Differential privacy parameter")
 parser.add_argument("--structure", type=str, default="rndpercent", choices=["chain", "random", "rndpercent"], help="Graph structure")
 parser.add_argument("--apply_dp", action="store_true", help="Apply differential privacy")
-parser.add_argument("--num_trials", type=int, default=10, help="Number of trials")
+parser.add_argument("--num_trials", type=int, default=1, help="Number of trials")
 parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
 
 args = parser.parse_args()
 
 clip_type = "linf"
 rescale = True
-offdiagpct = 0.5
+offdiagpct = 1.
 
 # set rng
 rng = np.random.default_rng(seed=42)
+# PASS TO FUN
 
 # Results storage
 results_dict = {
@@ -40,7 +41,7 @@ results_dict = {
 
 # Generate data
 outdir = "data/"
-generate_well_conditioned_gaussian(outdir, 1000, args.d, rescale=rescale, cond_max=10.0)
+generate_well_conditioned_gaussian(rng, outdir, 1000, args.d, rescale=rescale, cond_max=10.0)
 data_path = os.path.join(os.path.dirname(__file__), "..", "data",
                          "synthdata" + str(args.d) + "rescale" + str(rescale) + ".csv")
 bounds_path = os.path.join(os.path.dirname(__file__), "..", "data", "L_bounds_rescale" + str(rescale) + ".json")
@@ -50,8 +51,11 @@ data, _, _, Sigma_true, T = load_and_process_data(data_path, bounds_path, clip_t
 
 # Run experiment across multiple trials
 for t in range(args.num_trials):
-    t_seed =
+
+    print(f"TRIAL N. {t}")
+
     results = run_driver(
+        rng = rng,
         data=data,
         Sigma_true=Sigma_true,
         T=T,
