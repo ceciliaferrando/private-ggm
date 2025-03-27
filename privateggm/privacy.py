@@ -78,7 +78,7 @@ def gaussian_mechanism(rng, obj, sensitivity, rho):
 
     noisy_obj = obj + noise
 
-    return noisy_obj
+    return noisy_obj, noise
 
 
 def privatize_Sigma_tilde(rng, Sigma_tilde_vec, inds, d, Delta_cov_jk, rho):
@@ -101,7 +101,7 @@ def privatize_Sigma_tilde(rng, Sigma_tilde_vec, inds, d, Delta_cov_jk, rho):
 
     # Apply the Gaussian mechanism to privatize the entries
     #print("MAXENT SENSITIVITY", Delta_cov_jk)
-    Sigma_tilde_vec_dp = gaussian_mechanism(rng, Sigma_tilde_vec, Delta_cov_jk, rho_per_entry)
+    Sigma_tilde_vec_dp, noise_components = gaussian_mechanism(rng, Sigma_tilde_vec, Delta_cov_jk, rho_per_entry)
 
     # Reconstruct the full covariance matrix from the vectorized version
     Sigma_tilde_dp = reconstruct_sigma_tilde(inds, Sigma_tilde_vec_dp, d)
@@ -125,4 +125,4 @@ def privatize_Sigma_tilde(rng, Sigma_tilde_vec, inds, d, Delta_cov_jk, rho):
     # Ensure the matrix is symmetric
     assert np.allclose(Sigma_tilde_dp, Sigma_tilde_dp.T), "Sigma_tilde is not symmetric"
 
-    return Sigma_tilde_dp, Sigma_tilde_vec_dp
+    return Sigma_tilde_dp, Sigma_tilde_vec_dp, noise_components

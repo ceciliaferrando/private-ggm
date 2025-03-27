@@ -1,5 +1,5 @@
 import numpy as np
-import pandas as pd
+from scipy.linalg import solve, cholesky
 import jax
 jax.config.update("jax_enable_x64", True)
 import jax.numpy as jnp
@@ -10,6 +10,8 @@ from functools import partial
 from privateggm.utils import *
 
 # DEBUG_MODE = True
+
+# DIRECT LBFGS OPTIMIZATION METHOD
 
 def loss_fn(z, inds, Sigma_tilde_vec, d):
     """
@@ -30,8 +32,6 @@ def loss_fn(z, inds, Sigma_tilde_vec, d):
     total_loss = -log_det_term + trace_term
 
     return total_loss
-
-
 
 def optimize_lbfgs(Sigma_tilde_vec, z, inds, d, max_iters=100, verbose=False):
     """
@@ -74,7 +74,7 @@ def optimize_lbfgs(Sigma_tilde_vec, z, inds, d, max_iters=100, verbose=False):
     g_vals = []
     obj_vals = []
     prev_v = None  # Track previous loss value
-    tol = 1e-6  # Tolerance for stopping criterion
+    tol = 1e-8  # Tolerance for stopping criterion
     step_size = 1.0  # Initial step size
 
     for i in range(max_iters):
@@ -99,7 +99,7 @@ def optimize_lbfgs(Sigma_tilde_vec, z, inds, d, max_iters=100, verbose=False):
 
         # Print progress
         if verbose:
-            print(f"Iteration {i}: Loss = {v:.7e}, Grad Sum = {grad_sum:.7e}, Step Size = {step_size:.7e}")
+            print(f"Iteration {i}: Loss = {v:.6e}, Grad Sum = {grad_sum:.6e}, Step Size = {step_size:.6e}")
 
         # Stopping criterion: Check gradient norm
         if grad_sum < tol:
@@ -135,3 +135,90 @@ def optimize_lbfgs(Sigma_tilde_vec, z, inds, d, max_iters=100, verbose=False):
         print(f"is_nearly_singular? {is_nearly_singular}")
 
     return z, g_vals, obj_vals
+
+
+# MIRROR DESCENT METHOD
+
+def mirror_descent(Sigma_init, Sigma_tilde, inds, tau, max_iters=20000, eta_init=0.1, tol=1e-8, verbose=False):
+    """
+    Args:
+        Sigma_init: initial covariance
+        Sigma_tilde: empirical ovariance
+        inds: set of observed indices in Sigma_tilde
+        tau: matrix of weights, corresponding to privacy noise scale
+        max_iters: maximum number of iterations allowed
+        eta_init: initial learning rate
+        tol: threshold tolerance for stopping
+
+    Returns:
+        Optimized Sigma_opt
+    """
+
+    Sigma = Sigma_init
+    K = np.linalg.inv(Sigma)
+
+    eta = eta_init
+
+    def objective(Sigma):
+        loss = 0.0
+        for (i,j) in inds:
+            loss += (1 / tau[i, j] ** 2) * (Sigma_tilde[i, j] - Sigma[i, j]) ** 2
+        return loss
+
+    for iter in range(max_iters):
+
+        # compute gradients
+        grad = np.zeros_like(Sigma)
+
+        for (i,j) in inds:
+            grad[i,j] = (2/tau[i,j]**2) * (Sigma[i,j] - Sigma_tilde[i,j])
+
+            if i!=j:
+                grad[j,i] = grad[i,j]
+
+        # check grad norm
+        if verbose and iter % 100 == 0:
+            obj_val = objective(Sigma)
+            grad_sum = np.sum(np.abs(grad))  # Sum of absolute values of gradient elements
+            print(f"Iteration {iter}: Loss = {obj_val:.6e}, Grad Sum = {grad_sum:.6e}, Step Size = {eta:.6e}")
+
+        # search for eta that makes K remain PD
+        K_candidate = K + eta * grad
+
+        # set success check
+        success = False
+
+        # Try cholesky decomposition to check positive definiteness
+        try:
+            cholesky(K_candidate, lower=True)
+            success = True
+        except np.linalg.LinAlgError:
+            pass
+
+        # backtracking line search if needed
+        while not success and eta > 1e-12:
+            eta *= 0.75
+            K_candidate = K + eta * grad
+            try:
+                cholesky(K_candidate, lower=True)
+                success = True
+            except np.linalg.LinAlgError:
+                continue
+
+        if not success:
+            raise RuntimeError("failed to find PD K matrix")
+
+        # update K and Sigma
+        K_prev = K.copy()
+        K = K_candidate
+        Sigma = np.linalg.inv(K)
+
+        #Check convergence (norm of K change)
+        delta = np.linalg.norm(K - K_prev, 'fro')
+        if delta < tol:
+            break
+
+        # Reset step size for next iteration
+        eta = eta_init
+
+    return Sigma, K

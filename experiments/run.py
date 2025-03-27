@@ -13,7 +13,7 @@ parser = argparse.ArgumentParser(description="Run covariance matrix estimation e
 
 parser.add_argument("--d", type=int, required=True, help="dimension of synthetic data")
 parser.add_argument("--n_iters", type=int, default=500, help="Number of optimization iterations")
-parser.add_argument("--rho", type=float, default=1.0, help="Differential privacy parameter")
+parser.add_argument("--rho", type=float, default=2.0, help="Differential privacy parameter")
 parser.add_argument("--structure", type=str, default="rndpercent", choices=["chain", "random", "rndpercent"], help="Graph structure")
 parser.add_argument("--apply_dp", action="store_true", help="Apply differential privacy")
 parser.add_argument("--num_trials", type=int, default=1, help="Number of trials")
@@ -23,7 +23,7 @@ args = parser.parse_args()
 
 clip_type = "linf"
 rescale = True
-offdiagpct = 1.
+offdiagpct = 0.5
 
 # set rng
 rng = np.random.default_rng(seed=42)
