@@ -121,6 +121,8 @@ def privatize_Sigma_tilde(rng, Sigma_tilde_vec, inds, d, Delta_cov_jk, rho):
         print(f"0. is_ill_conditioned? {is_ill_conditioned}")
         print(f"0. is_nearly_singular? {is_nearly_singular}")
         #print(Sigma_tilde_dp)
+        np.save("pathologic_sigma_tilde_dp.npy", Sigma_tilde_dp)
+
 
     # Ensure the matrix is symmetric
     assert np.allclose(Sigma_tilde_dp, Sigma_tilde_dp.T), "Sigma_tilde is not symmetric"

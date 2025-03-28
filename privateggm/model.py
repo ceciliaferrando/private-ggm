@@ -98,7 +98,7 @@ def optimize_lbfgs(Sigma_tilde_vec, z, inds, d, max_iters=100, verbose=False):
         g_vals.append(grad_sum.item())
 
         # Print progress
-        if verbose:
+        if verbose and i % 100 == 0:
             print(f"Iteration {i}: Loss = {v:.6e}, Grad Sum = {grad_sum:.6e}, Step Size = {step_size:.6e}")
 
         # Stopping criterion: Check gradient norm
