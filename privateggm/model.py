@@ -142,83 +142,78 @@ def optimize_lbfgs(Sigma_tilde_vec, z, inds, d, max_iters=100, verbose=False):
 def mirror_descent(Sigma_init, Sigma_tilde, inds, tau, max_iters=20000, eta_init=0.1, tol=1e-8, verbose=False):
     """
     Args:
-        Sigma_init: initial covariance
-        Sigma_tilde: empirical ovariance
-        inds: set of observed indices in Sigma_tilde
-        tau: matrix of weights, corresponding to privacy noise scale
-        max_iters: maximum number of iterations allowed
-        eta_init: initial learning rate
-        tol: threshold tolerance for stopping
+        Sigma_init: Initial covariance matrix (positive definite)
+        Sigma_tilde: Empirical covariance matrix with noisy observations
+        inds: List of observed indices as tuples (i,j) where i <= j
+        tau: Matrix of noise scales (same shape as Sigma_tilde)
+        max_iters: Maximum number of iterations
+        eta_init: Initial learning rate
+        tol: Convergence tolerance (Frobenius norm change in K)
+        verbose: Print progress
 
     Returns:
-        Optimized Sigma_opt
+        Sigma: Optimized covariance matrix
+        K: Inverse of Sigma
     """
-
-    Sigma = Sigma_init
+    # Initialize variables
+    Sigma = Sigma_init.copy()
     K = np.linalg.inv(Sigma)
-
     eta = eta_init
+    n = Sigma.shape[0]
 
     def objective(Sigma):
         loss = 0.0
-        for (i,j) in inds:
+        for (i, j) in processed_inds:
             loss += (1 / tau[i, j] ** 2) * (Sigma_tilde[i, j] - Sigma[i, j]) ** 2
         return loss
 
     for iter in range(max_iters):
 
-        # compute gradients
+        # compute gradient (symmetric)
         grad = np.zeros_like(Sigma)
+        for (i, j) in inds:
+            grad_ij = (2 / tau[i, j] ** 2) * (Sigma[i, j] - Sigma_tilde[i, j])
+            grad[i, j] = grad_ij
+            if i != j:
+                grad[j, i] = grad_ij
 
-        for (i,j) in inds:
-            grad[i,j] = (2/tau[i,j]**2) * (Sigma[i,j] - Sigma_tilde[i,j])
-
-            if i!=j:
-                grad[j,i] = grad[i,j]
-
-        # check grad norm
-        if verbose and iter % 100 == 0:
-            obj_val = objective(Sigma)
-            grad_sum = np.sum(np.abs(grad))  # Sum of absolute values of gradient elements
-            print(f"Iteration {iter}: Loss = {obj_val:.6e}, Grad Sum = {grad_sum:.6e}, Step Size = {eta:.6e}")
-
-        # search for eta that makes K remain PD
-        K_candidate = K + eta * grad
-
-        # set success check
+        # backtracking line search
         success = False
+        current_eta = eta  # Start with previous iteration's eta
+        K_candidate = None
 
-        # Try cholesky decomposition to check positive definiteness
-        try:
-            cholesky(K_candidate, lower=True)
-            success = True
-        except np.linalg.LinAlgError:
-            pass
-
-        # backtracking line search if needed
-        while not success and eta > 1e-12:
-            eta *= 0.75
-            K_candidate = K + eta * grad
+        while not success and current_eta > 1e-12:
+            K_candidate = K + current_eta * grad
             try:
+                # Check positive definiteness
                 cholesky(K_candidate, lower=True)
                 success = True
             except np.linalg.LinAlgError:
-                continue
+                current_eta *= 0.5  # Reduce step size
 
         if not success:
-            raise RuntimeError("failed to find PD K matrix")
+            raise RuntimeError(f"Failed to find PD K matrix after {iter} iterations")
 
-        # update K and Sigma
+        # update
         K_prev = K.copy()
         K = K_candidate
         Sigma = np.linalg.inv(K)
+        eta = current_eta
 
-        #Check convergence (norm of K change)
+        # step size decay regardless of the conditions above
+        eta *= 0.995
+
+        # convergence check
         delta = np.linalg.norm(K - K_prev, 'fro')
         if delta < tol:
+            if verbose:
+                print(f"Converged at iteration {iter}")
             break
 
-        # Reset step size for next iteration
-        eta = eta_init
+        # progress prints
+        if verbose and iter % 100 == 0:
+            obj = objective(Sigma)
+            grad_norm = np.linalg.norm(grad)
+            print(f"Iter {iter:5d} | Obj: {obj:.3e} | ΔK: {delta:.3e} | η: {eta:.3e} | Grad: {grad_norm:.3e}")
 
     return Sigma, K
