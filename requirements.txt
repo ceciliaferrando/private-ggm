@@ -14,8 +14,10 @@ certifi==2025.1.31
 cffi==1.17.1
 charset-normalizer==3.4.1
 chex==0.1.89
+clarabel==0.10.0
 comm==0.2.2
 contourpy==1.3.0
+cvxpy==1.6.4
 cycler==0.12.1
 debugpy==1.8.13
 decorator==5.2.1
@@ -73,6 +75,7 @@ notebook_shim==0.2.4
 numpy==2.0.2
 opt_einsum==3.4.0
 optax==0.2.4
+osqp==1.0.3
 overrides==7.7.0
 packaging==24.2
 pandas==2.2.3
@@ -101,6 +104,7 @@ rfc3986-validator==0.1.1
 rpds-py==0.23.1
 scikit-learn==1.6.1
 scipy==1.13.1
+scs==3.2.7.post2
 seaborn==0.13.2
 Send2Trash==1.8.3
 six==1.17.0
