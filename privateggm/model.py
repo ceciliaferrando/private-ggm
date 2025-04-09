@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.linalg import solve, cholesky
+from scipy.linalg import solve, cholesky, eigh
 import jax
 jax.config.update("jax_enable_x64", True)
 import jax.numpy as jnp
@@ -43,80 +43,71 @@ def optimize_lbfgs(Sigma_tilde_vec, z, inds, d, max_iters=100, verbose=False):
 
     rng_key = jrandom.PRNGKey(42)
 
-    # linesearch
+    # Linesearch
     linesearch = optax.scale_by_zoom_linesearch(max_linesearch_steps=15)
 
-    # set up optimizer
+    # Set up optimizer
     opt = optax.chain(
         optax.lbfgs(),
         linesearch,
     )
 
-    # init state
+    # Init state
     state = opt.init(z)
 
-    # loss function wrapper
+    # Loss function wrapper
     loss_fn_wrapper = partial(loss_fn, inds=inds, Sigma_tilde_vec=Sigma_tilde_vec, d=d)
 
-    # Create the value and gradient function using the partially applied function (compiled once)
+    # Value and gradient function
     v_and_g = jax.value_and_grad(loss_fn_wrapper)
 
-    # jax.jitted optimization step
     @jax.jit
     def optimization_step(z, state, step_size):
         v, g = v_and_g(z)
         updates, state = opt.update(g, state, z, value=v, grad=g, value_fn=loss_fn_wrapper)
-        z_new = z + step_size * updates  # Apply updates with step size
+        z_new = z + step_size * updates
         grad_sum = jnp.sum(jnp.abs(g))
         return z_new, state, v, grad_sum
 
-    # optimization loop
+    # Optimization loop
     g_vals = []
     obj_vals = []
-    prev_v = None  # Track previous loss value
-    tol = 1e-8  # Tolerance for stopping criterion
-    step_size = 1.0  # Initial step size
+    prev_v = None
+    tol = 1e-8
+    eta = 1.0
 
     for i in range(max_iters):
-        z_new, state, v, grad_sum = optimization_step(z, state, step_size)
+        z_new, state, v, grad_sum = optimization_step(z, state, eta)
 
-        # Backtracking line search: Reduce step size if loss increases
+        # Backtracking if loss increases
         if prev_v is not None and v > prev_v:
-            step_size *= 0.5  # Reduce step size
+            eta *= 0.5
             if verbose:
-                print(f"Iteration {i}: Loss increased. Reducing step size to {step_size:.7e}")
+                print(f"Iter {i:5d} | Loss increased → reducing step size to {eta:.3e}")
             continue
 
-        # Update z and step size
         z = z_new
-        #jax.debug.print("{z} ", z=z[:10])
+        eta = min(eta * 1.1, 1.0)
 
-        step_size = min(step_size * 1.1, 1.0)  # Increase step size slightly
-
-        # Append values for tracking
         obj_vals.append(v.item())
         g_vals.append(grad_sum.item())
 
-        # Print progress
         if verbose and i % 100 == 0:
-            print(f"Iteration {i}: Loss = {v:.6e}, Grad Sum = {grad_sum:.6e}, Step Size = {step_size:.6e}")
+            print(f"Iter {i:5d} | Obj: {v:.3e} | Grad Sum: {grad_sum:.3e} | η: {eta:.3e}")
 
-        # Stopping criterion: Check gradient norm
         if grad_sum < tol:
             if verbose:
-                print(f"Optimization converged at iteration {i}: Grad Sum = {grad_sum:.7e}")
+                print(f"Converged at iter {i:5d} | Grad Sum: {grad_sum:.3e}")
             break
 
-        # Stopping criterion: Check loss change
         if prev_v is not None and abs(v - prev_v) < tol:
             if verbose:
-                print(f"Optimization converged at iteration {i}: Loss Change = {abs(v - prev_v):.7e}")
+                print(f"Converged at iter {i:5d} | ΔLoss: {abs(v - prev_v):.3e}")
             break
 
-        # Update previous loss value
         prev_v = v
 
-    #jax.debug.print("{z} ", z=z[:10])
+    # Final K(z) construction
     K_z = get_K(z, inds, d)
 
     eigvals = np.linalg.eigvalsh(K_z)
@@ -129,17 +120,19 @@ def optimize_lbfgs(Sigma_tilde_vec, z, inds, d, max_iters=100, verbose=False):
     is_nearly_singular = min_eigval < 1e-8
 
     if is_non_pd or is_ill_conditioned or is_nearly_singular:
-        print("PROBLEM DETECTED WITH K_z:")
-        print(f"is_non_pd? {is_non_pd}")
-        print(f"is_ill_conditioned? {is_ill_conditioned}")
-        print(f"is_nearly_singular? {is_nearly_singular}")
+        print("-" * 60)
+        print("jIssue detected with optimized K(z):")
+        print(f"  • Non-PD:            {is_non_pd}")
+        print(f"  • Ill-conditioned:   {is_ill_conditioned} (cond #: {cond_number:.2e})")
+        print(f"  • Nearly singular:   {is_nearly_singular} (min eigval: {min_eigval:.2e})")
+        print("-" * 60)
 
     return z, g_vals, obj_vals
 
 
 # MIRROR DESCENT METHOD
 
-def mirror_descent(Sigma_init, Sigma_tilde, inds, tau, max_iters=20000, eta_init=0.1, tol=1e-8, verbose=False):
+def mirror_descent(Sigma_init, Sigma_tilde, inds, tau, max_iters=20000, eta_init=0.01, tol=1e-8, verbose=False):
     """
     Args:
         Sigma_init: Initial covariance matrix (positive definite)
@@ -159,11 +152,11 @@ def mirror_descent(Sigma_init, Sigma_tilde, inds, tau, max_iters=20000, eta_init
     Sigma = Sigma_init.copy()
     K = np.linalg.inv(Sigma)
     eta = eta_init
-    n = Sigma.shape[0]
+    d = Sigma.shape[0]
 
     def objective(Sigma):
         loss = 0.0
-        for (i, j) in processed_inds:
+        for (i, j) in inds:
             loss += (1 / tau[i, j] ** 2) * (Sigma_tilde[i, j] - Sigma[i, j]) ** 2
         return loss
 
@@ -189,7 +182,7 @@ def mirror_descent(Sigma_init, Sigma_tilde, inds, tau, max_iters=20000, eta_init
                 cholesky(K_candidate, lower=True)
                 success = True
             except np.linalg.LinAlgError:
-                current_eta *= 0.5  # Reduce step size
+                current_eta *= 0.9  # Reduce step size
 
         if not success:
             raise RuntimeError(f"Failed to find PD K matrix after {iter} iterations")
@@ -217,3 +210,80 @@ def mirror_descent(Sigma_init, Sigma_tilde, inds, tau, max_iters=20000, eta_init
             print(f"Iter {iter:5d} | Obj: {obj:.3e} | ΔK: {delta:.3e} | η: {eta:.3e} | Grad: {grad_norm:.3e}")
 
     return Sigma, K
+
+
+def projected_gradient_descent(S_observed, mask, eta=0.1, max_iters=1000, tol=1e-6):
+    d = S_observed.shape[0]
+
+    # Ensure mask is 2D boolean array w/ matching shape
+    assert mask.shape == S_observed.shape, "Mask must match matrix dimensions"
+
+    # 1. set unobserved entries to 0
+    S = np.zeros_like(S_observed)
+    S[mask] = S_observed[mask]  # Correct 2D indexing
+
+    # 2. PSD projection
+    Sigma = project_to_PSD(S, thresh=1e-3)
+
+    prev_Sigma = Sigma.copy()
+    for t in range(max_iters):
+        # 3. compute gradient ONLY on observed entries
+        gradient = np.zeros_like(Sigma)
+        gradient[mask] = Sigma[mask] - S[mask]  # 2D indexing
+
+        # 4. update and project to psd
+        Sigma_temp = Sigma - eta * gradient
+        Sigma = project_to_PSD(Sigma_temp, thresh=1e-3)
+
+        if np.linalg.norm(Sigma - prev_Sigma, 'fro') < tol:
+            break
+        prev_Sigma = Sigma.copy()
+
+    return Sigma
+
+def pgd_maxent(Sigma_tilde, inds, max_iters=1000, eta=0.01, tol=1e-6, verbose=True):
+    """
+    Two-step PGD + Max Entropy pipeline.
+
+    Args:
+        Sigma_true: Ground truth covariance matrix
+        Sigma_tilde: Observed noisy covariance matrix
+        inds: Array of observed indices [[i,j], ...]
+        max_iters: Max iterations for PGD
+        eta: Step size for PGD
+        tol: Convergence tolerance for PGD
+        verbose: Print progress
+    """
+    d = Sigma_tilde.shape[0]
+
+    # After (correct 2D mask)
+    mask = np.zeros(Sigma_tilde.shape, dtype=bool)  # Explicit 2D shape
+    for (i, j) in inds:
+        mask[i, j] = True
+        mask[j, i] = True  # Ensure symmetry
+
+    Sigma_obs = np.zeros_like(Sigma_tilde)
+    Sigma_obs[mask] = Sigma_tilde[mask]  # Fill observed entries, others remain 0
+
+    # Stage A: Projected Gradient Descent
+    if verbose:
+        print("\nRunning Projected Gradient Descent...")
+    Sigma_psd = projected_gradient_descent(Sigma_obs, mask, eta=eta, max_iters=max_iters, tol=tol)
+
+    # Stage B: Max Entropy Optimization
+    if verbose:
+        print("\nRunning Max Entropy Refinement...")
+    try:
+        # Direct method (using your existing optimization pipeline)
+        rows, cols = inds[:, 0], inds[:, 1]
+        Sigma_psd_vec = Sigma_psd[rows, cols]
+        z_init = initialize_z(Sigma_psd, inds)
+        z_opt, g_vals, obj_vals = optimize_lbfgs(Sigma_psd_vec, z_init, inds, d, max_iters=1000, verbose=False)
+        K_z_opt = get_K(z_opt, inds, d)
+        Sigma_opt = np.linalg.inv(K_z_opt)
+
+    except Exception as e:
+        print(f"Optimization failed: {str(e)}")
+        return
+
+    return Sigma_opt
