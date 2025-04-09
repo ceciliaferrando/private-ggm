@@ -152,7 +152,6 @@ def mirror_descent(Sigma_init, Sigma_tilde, inds, tau, max_iters=20000, eta_init
     Sigma = Sigma_init.copy()
     K = np.linalg.inv(Sigma)
     eta = eta_init
-    d = Sigma.shape[0]
 
     def objective(Sigma):
         loss = 0.0
@@ -194,7 +193,7 @@ def mirror_descent(Sigma_init, Sigma_tilde, inds, tau, max_iters=20000, eta_init
         eta = current_eta
 
         # step size decay regardless of the conditions above
-        eta *= 0.995
+        # eta *= 0.995
 
         # convergence check
         delta = np.linalg.norm(K - K_prev, 'fro')
