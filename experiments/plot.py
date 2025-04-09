@@ -82,7 +82,8 @@ def plot_results(results_dir, dataset_name, x_values, x_axis="d"):
             if x_axis == "d":
                 key = int(json_file.split("_d")[1].split("_")[0])  # Extract dimension d
             elif x_axis == "rho":
-                key = float(json_file.split("_rho")[2].split("_")[0])  # Extract rho
+                print(json_file.split("_rho"))
+                key = float(json_file.split("_rho")[1].split("_")[0])  # Extract rho
             else:
                 raise ValueError("x_axis must be either 'd' or 'rho'.")
 
@@ -126,8 +127,8 @@ def plot_results(results_dir, dataset_name, x_values, x_axis="d"):
         plt.close()
 
 
-results_dir = "results/rho1off50seed/"
-dataset_name = "synthdata"
+results_dir = "results/pgdmaxent-rho/"
+dataset_name = "pgd-maxent_synthdata"
 d_values = [2, 5, 10, 20, 30, 40, 50]
 rho_values = [0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
-plot_results(results_dir, dataset_name, d_values, x_axis="d")
+plot_results(results_dir, dataset_name, rho_values, x_axis="rho")

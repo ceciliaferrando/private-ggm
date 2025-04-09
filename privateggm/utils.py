@@ -67,13 +67,10 @@ def initialize_z(Sigma_tilde, inds):
     return jnp.array(z_init)
 
 
-def project_to_PSD(Sigma, thresh=1e-4):
+def project_to_PSD(Sigma, thresh):
     eigvals, eigvecs = jnp.linalg.eigh(Sigma)
     eigvals = jnp.maximum(eigvals, thresh)  # ensure a minimum positive threshold
     return eigvecs @ jnp.diag(eigvals) @ eigvecs.T
-    # w, V = np.linalg.eigh(Sigma)
-    # w[w < thresh] = thresh
-    # return (V * w).dot(V)
 
 
 def get_observed_Sigma_entries(Sigma):

@@ -12,8 +12,9 @@ parser = argparse.ArgumentParser(description="Run covariance matrix estimation e
 
 
 parser.add_argument("--d", type=int, required=True, help="dimension of synthetic data")
+parser.add_argument("--optimizer", type=str, required=True, help="maxent, mirror-descent, or pgd-maxent?")
 parser.add_argument("--n_iters", type=int, default=500, help="Number of optimization iterations")
-parser.add_argument("--rho", type=float, default=1.0, help="Differential privacy parameter")
+parser.add_argument("--rho", type=float, default=5.0, help="Differential privacy parameter")
 parser.add_argument("--structure", type=str, default="rndpercent", choices=["chain", "random", "rndpercent"], help="Graph structure")
 parser.add_argument("--apply_dp", action="store_true", help="Apply differential privacy")
 parser.add_argument("--num_trials", type=int, default=10, help="Number of trials")
@@ -23,7 +24,7 @@ args = parser.parse_args()
 
 clip_type = "linf"
 rescale = True
-offdiagpct = 1.
+offdiagpct = 0.5
 
 # set rng
 rng = np.random.default_rng(seed=42)
@@ -69,10 +70,11 @@ for t in range(args.num_trials):
         clip_type=clip_type,
         rescale=rescale,
         alpha=None,
-        optimizer="lbfgs"
+        optimizer=args.optimizer
     )
 
     Sigma_true = results['Sigma_true']
+    Sigma_tilde = results['Sigma_true']
     Sigma_SSP = results['Sigma_SSP']
     Sigma_MaxEnt = results['Sigma_opt']
 
@@ -87,7 +89,7 @@ for t in range(args.num_trials):
 # Save results to JSON file
 results_dir = "results"
 os.makedirs(results_dir, exist_ok=True)
-suffix = f"synthdata_d{args.d}_rho{args.rho}_offdiagpct{offdiagpct}_{clip_type}_rescale{rescale}"
+suffix = f"{args.optimizer}_synthdata_d{args.d}_rho{args.rho}_offdiagpct{offdiagpct}_{clip_type}_rescale{rescale}"
 output_filename = os.path.join(results_dir, f"{suffix}_errors.json")
 with open(output_filename, "w") as f:
     json.dump(results_dict, f, indent=4)

@@ -132,7 +132,7 @@ def optimize_lbfgs(Sigma_tilde_vec, z, inds, d, max_iters=100, verbose=False):
 
 # MIRROR DESCENT METHOD
 
-def mirror_descent(Sigma_init, Sigma_tilde, inds, tau, max_iters=20000, eta_init=0.01, tol=1e-8, verbose=False):
+def mirror_descent(Sigma_init, Sigma_tilde, inds, tau, max_iters=20000, eta_init=1e-5, tol=1e-8, verbose=False):
     """
     Args:
         Sigma_init: Initial covariance matrix (positive definite)

@@ -80,18 +80,24 @@ def run_non_iterative_mode(rng, n, T, Sigma_true, Sigma_tilde, max_iters, apply_
         noise_matrix = reconstruct_sigma_tilde(inds, noise_components, d)
 
     # **Optimization Method Selection**
-    if optimizer == "lbfgs":
+    if optimizer == "maxent":
         # L-BFGS Optimization
         z_init = initialize_z(Sigma_tilde, inds)
         z_opt, g_vals, obj_vals = optimize_lbfgs(Sigma_tilde_vec, z_init, inds, d, max_iters=max_iters)
         K_z_opt = get_K(z_opt, inds, d)
         Sigma_opt = np.linalg.inv(K_z_opt)
 
-    elif optimizer == "mirror_descent":
+    elif optimizer == "mirror-descent":
         # Mirror Descent Optimization
         Sigma_init = np.eye(d)
         tau = noise_matrix if apply_dp else np.ones_like(Sigma_true)  # Use noise matrix if DP is applied
         Sigma_opt, K_z_opt = mirror_descent(Sigma_init, Sigma_tilde, inds, tau, max_iters=max_iters)
+
+    elif optimizer == "pgd-maxent":
+        # need to first privatize the whole matrix
+
+        Sigma_opt = pgd_maxent(Sigma_tilde, inds, max_iters=1000, eta=0.1, tol=1e-6, verbose=True)
+        K_z_opt = np.linalg.inv(Sigma_opt)
 
     else:
         raise ValueError("Invalid optimizer choice. Use 'lbfgs' or 'mirror_descent'.")
