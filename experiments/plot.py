@@ -127,8 +127,8 @@ def plot_results(results_dir, dataset_name, x_values, x_axis="d"):
         plt.close()
 
 
-results_dir = "results/pgdmaxent-rho/"
+results_dir = "results/pgdmaxent-doublediag/"
 dataset_name = "pgd-maxent_synthdata"
 d_values = [2, 5, 10, 20, 30, 40, 50]
 rho_values = [0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
-plot_results(results_dir, dataset_name, rho_values, x_axis="rho")
+plot_results(results_dir, dataset_name, d_values, x_axis="d")

@@ -228,7 +228,10 @@ def projected_gradient_descent(S_observed, mask, eta=0.1, max_iters=1000, tol=1e
     for t in range(max_iters):
         # 3. compute gradient ONLY on observed entries
         gradient = np.zeros_like(Sigma)
-        gradient[mask] = Sigma[mask] - S[mask]  # 2D indexing
+        gradient[mask] = Sigma[mask] - S[mask]
+        # double the diagonal elements of the gradient
+        gradient_diag = np.diag(np.diag(gradient))
+        gradient = gradient + gradient_diag
 
         # 4. update and project to psd
         Sigma_temp = Sigma - eta * gradient
