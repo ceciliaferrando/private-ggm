@@ -129,6 +129,6 @@ def plot_results(results_dir, dataset_name, x_values, x_axis="d"):
 
 results_dir = "results/pgdmaxent-doublediag/"
 dataset_name = "pgd-maxent_synthdata"
-d_values = [2, 5, 10, 20, 30, 40, 50]
+d_values = [2, 5, 10, 20, 30, 40, 50, 100, 200]
 rho_values = [0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
 plot_results(results_dir, dataset_name, d_values, x_axis="d")

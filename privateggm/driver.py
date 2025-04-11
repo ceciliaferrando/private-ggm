@@ -75,9 +75,8 @@ def run_non_iterative_mode(rng, n, T, Sigma_true, Sigma_tilde, max_iters, apply_
         elif clip_type == 'l2':
             Delta_cov_jk = cov_jk_sensitivity_l2(n, T)
         Sigma_tilde, \
-        Sigma_tilde_vec, \
-        noise_components = privatize_Sigma_tilde(rng, Sigma_tilde_vec, inds, d, Delta_cov_jk, rho)
-        noise_matrix = reconstruct_sigma_tilde(inds, noise_components, d)
+        Sigma_tilde_vec
+
 
     # **Optimization Method Selection**
     if optimizer == "maxent":
@@ -90,7 +89,7 @@ def run_non_iterative_mode(rng, n, T, Sigma_true, Sigma_tilde, max_iters, apply_
     elif optimizer == "mirror-descent":
         # Mirror Descent Optimization
         Sigma_init = np.eye(d)
-        tau = noise_matrix if apply_dp else np.ones_like(Sigma_true)  # Use noise matrix if DP is applied
+        tau = np.ones_like(Sigma_true)  # Use noise matrix if DP is applied
         Sigma_opt, K_z_opt = mirror_descent(Sigma_init, Sigma_tilde, inds, tau, max_iters=max_iters)
 
     elif optimizer == "pgd-maxent":

@@ -127,4 +127,4 @@ def privatize_Sigma_tilde(rng, Sigma_tilde_vec, inds, d, Delta_cov_jk, rho):
     # Ensure the matrix is symmetric
     assert np.allclose(Sigma_tilde_dp, Sigma_tilde_dp.T), "Sigma_tilde is not symmetric"
 
-    return Sigma_tilde_dp, Sigma_tilde_vec_dp, noise_components
+    return Sigma_tilde_dp, Sigma_tilde_vec_dp
