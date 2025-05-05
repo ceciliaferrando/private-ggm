@@ -74,8 +74,7 @@ def run_non_iterative_mode(rng, n, T, Sigma_true, Sigma_tilde, max_iters, apply_
             Delta_cov_jk = cov_jk_sensitivity_linf(n, T)
         elif clip_type == 'l2':
             Delta_cov_jk = cov_jk_sensitivity_l2(n, T)
-        Sigma_tilde, \
-        Sigma_tilde_vec
+        Sigma_tilde, Sigma_tilde_vec = privatize_Sigma_tilde(rng, Sigma_tilde_vec, inds, d, Delta_cov_jk, rho)
 
 
     # **Optimization Method Selection**

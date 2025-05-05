@@ -90,35 +90,54 @@ def plot_results(results_dir, dataset_name, x_values, x_axis="d"):
             results_dict[key] = data
 
     metrics = ["mahalanobis", "l2", "mse"]
+
+    label_map = {
+        "MaxEnt": "PSD-MaxEnt",
+        "SSP": "SSP"
+    }
+
+    color_map = {
+        label_map["MaxEnt"]: "blue",
+        label_map["SSP"]: "red"
+    }
+
     for metric in metrics:
         # Create a list to store raw data for seaborn
         data_list = []
         for x in x_values:
             if x in results_dict:
-                for method in ['MaxEnt', 'SSP']:
-                    # Get the list of error measurements for the current method and metric
+                for method in ["MaxEnt", "SSP"]:
                     values = results_dict[x][f"{method}_{metric}"]
-                    # Append each measurement along with its associated x value and method
+                    friendly = label_map[method]
+
                     for val in values:
                         data_list.append({
                             x_axis: x,
-                            'Error': val,
-                            'Method': method
+                            "Error": val,
+                            "Method": friendly
                         })
 
         # Create a DataFrame from the raw data
         df = pd.DataFrame(data_list)
 
         # Set up the figure
-        plt.figure(figsize=(8, 6))
+        plt.figure(figsize=(6, 4))
         # Use seaborn lineplot to automatically compute and plot the confidence interval bands.
-        sns.lineplot(data=df, x=x_axis, y="Error", hue="Method", errorbar=('ci', 95), marker="o")
+        sns.lineplot(
+            data=df,
+            x=x_axis,
+            y="Error",
+            hue="Method",
+            palette=color_map,
+            errorbar=('ci', 95),
+            marker="o"
+        )
 
         plt.xlabel(x_axis)
         plt.ylabel(f'{metric.upper()} Error')
-        plt.title(f'MaxEnt vs SSP {metric.upper()} error across {x_axis.lower()}')
+        plt.title(f'PSD-MaxEnt vs SSP {metric.upper()} error across {x_axis.lower()}')
         plt.yscale('log')
-        plt.grid(True, which="both", linestyle="--", linewidth=0.5)
+        #plt.grid(True, which="both", linestyle="--", linewidth=0.5)
 
         # Save the plot
         plot_filename = os.path.join(results_dir, f"{dataset_name}_{metric}_vs_{x_axis}.png")
@@ -127,8 +146,11 @@ def plot_results(results_dir, dataset_name, x_values, x_axis="d"):
         plt.close()
 
 
-results_dir = "results/pgdmaxent-doublediag/"
+results_dir = "results/offdiag10-d/"
 dataset_name = "pgd-maxent_synthdata"
 d_values = [2, 5, 10, 20, 30, 40, 50, 100, 200]
-rho_values = [0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
 plot_results(results_dir, dataset_name, d_values, x_axis="d")
+
+results_dir = "results/offdiag10-rho/"
+rho_values = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
+plot_results(results_dir, dataset_name, rho_values, x_axis="rho")
