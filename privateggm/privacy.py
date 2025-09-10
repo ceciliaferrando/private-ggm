@@ -1,4 +1,6 @@
 import numpy as np
+from scipy.special import logsumexp
+
 from privateggm.utils import *
 
 
@@ -19,10 +21,10 @@ def cov_jk_sensitivity_l2(n, R):
     return R ** 2 / n
 
 
-def exponential_mechanism(off_diag_errors, rho, alpha, Delta_cov_jk, rounds):
+def exponential_mechanism(rng, flat_scores, Delta_cov_jk, rho):
     # compute the log of the unnormalized probabilities
-    log_unnorm_probabilities = ((2 * np.sqrt(rho * (1 - alpha) / rounds)) / (2 * Delta_cov_jk)) * np.array(
-        off_diag_errors)
+    log_unnorm_probabilities = ((2 * np.sqrt(rho)) / (2 * Delta_cov_jk)) * np.array(
+        flat_scores)
 
     # compute log-sum-exp to normalize probabilities
     log_prob_sum = logsumexp(log_unnorm_probabilities)
@@ -32,7 +34,7 @@ def exponential_mechanism(off_diag_errors, rho, alpha, Delta_cov_jk, rounds):
     #print("off_diag_probabilities", off_diag_probabilities)
 
     # select
-    worst_off_diag_index = np.random.choice(len(off_diag_errors), p=off_diag_probabilities)
+    worst_off_diag_index = rng.choice(len(flat_scores), p=off_diag_probabilities)
 
     return worst_off_diag_index
 

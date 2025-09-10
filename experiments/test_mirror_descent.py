@@ -10,12 +10,12 @@ def test_mirror_descent():
 
     n = 5
     A = np.random.randn(n, n)
-    Sigma_true = A @ A.T + np.eye(n)  # Ensure well-conditioned
+    Sigma_true = A @ A.T + np.eye(n)  # ensure well-conditioned
 
     # Select observations (only observe diagonal and some lower triangle)
     noise = 0.1 * np.random.randn(n, n)
     Sigma_tilde = Sigma_true + noise
-    Sigma_tilde = (Sigma_tilde + Sigma_tilde.T) / 2  # Symmetrize
+    Sigma_tilde = (Sigma_tilde + Sigma_tilde.T) / 2  # symmetrize
     inds = [(i, j) for i in range(n) for j in range(n) if (i >= j and i%2==0)]  # Lower triangle
 
     # nitialize parameters

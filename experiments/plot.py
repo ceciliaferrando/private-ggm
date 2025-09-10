@@ -80,7 +80,7 @@ def plot_results(results_dir, dataset_name, x_values, x_axis="d"):
 
             # Extract x-axis variable from filename
             if x_axis == "d":
-                key = int(json_file.split("_d")[1].split("_")[0])  # Extract dimension d
+                key = int(json_file.split("_d")[-1].split("_")[0])  # Extract dimension d
             elif x_axis == "rho":
                 print(json_file.split("_rho"))
                 key = float(json_file.split("_rho")[1].split("_")[0])  # Extract rho
@@ -146,11 +146,14 @@ def plot_results(results_dir, dataset_name, x_values, x_axis="d"):
         plt.close()
 
 
-results_dir = "results/offdiag10-d/"
-dataset_name = "pgd-maxent_synthdata"
-d_values = [2, 5, 10, 20, 30, 40, 50, 100, 200]
-plot_results(results_dir, dataset_name, d_values, x_axis="d")
+if __name__ == "__main__":  
+    results_dir = "results/0908_d/"
+    dataset_name = "pgd-maxent_synthdata"
+    # d_values = [2, 5, 10, 20, 30, 40, 50, 100, 200]
+    d_values = [5, 10, 20, 50]
+    plot_results(results_dir, dataset_name, d_values, x_axis="d")
 
-results_dir = "results/offdiag10-rho/"
-rho_values = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
-plot_results(results_dir, dataset_name, rho_values, x_axis="rho")
+    # results_dir = "results/off50-rho-0505/"
+    # dataset_name = "pgd-maxent_synthdata"
+    # rho_values = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
+    # plot_results(results_dir, dataset_name, rho_values, x_axis="rho")

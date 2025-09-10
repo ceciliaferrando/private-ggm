@@ -8,6 +8,7 @@ import optax
 from functools import partial
 
 from privateggm.utils import *
+from privateggm.privacy import gaussian_mechanism, exponential_mechanism, cov_jk_sensitivity_l2, cov_jk_sensitivity_linf
 
 # DEBUG_MODE = True
 
@@ -289,3 +290,184 @@ def pgd_maxent(Sigma_tilde, inds, max_iters=1000, eta=0.01, tol=1e-6, verbose=Tr
         return
 
     return Sigma_opt
+
+
+class IterativePrivateGGM:
+    def __init__(self, rng, d, rho, alpha, max_iters, sensitivity_type, norm_bound, optimizer="pgd-maxent"):
+        """
+        Initialize Iterative Private GGM
+        
+        Args:
+            rng: Random number generator
+            d (int): Number of features (dimension)
+            rho (float): Privacy parameter  
+            alpha (float): Budget split parameter (default 0.2)
+            max_iters (int): Number of iterations
+            sensitivity_type (str): Type of sensitivity to use ('l2' or 'linf')
+            norm_bound (float): R for L2 norm bound or B for Linf norm bound
+            optimizer (str): Optimization method to use
+        """
+        self.rng = rng
+        self.d = d
+        self.rho = rho
+        self.alpha = alpha
+        self.max_iters = max_iters
+        self.sensitivity_type = sensitivity_type
+        self.norm_bound = norm_bound
+        self.optimizer = optimizer
+        
+        # Split privacy budget
+        self.rho_m = self.rho * alpha / 2  # mean estimation
+        self.rho_v = self.rho * alpha / 2  # variance estimation
+        self.rho_c = self.rho * (1-alpha) / 2  # covariance estimation
+        self.rho_s = self.rho * (1-alpha) / 2  # selection mechanism
+        
+        # Init storage for measurements
+        self.measured_entries = set()  
+        self.Sigma_tilde = np.zeros((d, d))  # Noisy measurements
+        self.empirical_cov = None  
+
+    def get_sensitivity(self, n):
+        """Get the sensitivity for single entry measurements"""
+        from privateggm.privacy import cov_jk_sensitivity_l2, cov_jk_sensitivity_linf
+        
+        if self.sensitivity_type == 'l2':
+            return cov_jk_sensitivity_l2(n, self.norm_bound)
+        elif self.sensitivity_type == 'linf':
+            return cov_jk_sensitivity_linf(n, self.norm_bound)
+        else:
+            raise ValueError(f"Unknown sensitivity type: {self.sensitivity_type}")
+
+    def get_score_sensitivity(self, n):
+        """
+        Compute sensitivity for the scoring function |Sigma_jk(X) - hat_Sigma_jk|
+        This needs careful analysis based on your sensitivity bounds
+        """
+        # For L2 bounded data: the sensitivity of a single covariance entry
+        base_sensitivity = self.get_sensitivity(n)
+        # The score function has sensitivity 2 * base_sensitivity since it's |f(X) - constant|
+        # TO-DO: double check analysis
+        return 2 * base_sensitivity
+
+    def compute_entry_scores(self, Sigma_hat):
+        """
+        compute scores for unmeasured OFF-DIAGONAL entries
+        """
+        scores = np.zeros((self.d, self.d))
+        
+        # Only score unmeasured off-diagonal entries
+        for i in range(self.d):
+            for j in range(i+1, self.d):  # Only upper triangular, off-diagonal
+                if (i,j) not in self.measured_entries:
+                    score = np.abs(self.empirical_cov[i,j] - Sigma_hat[i,j])
+                    scores[i,j] = score
+                    
+        return scores
+
+    def fit(self, X):
+        """
+        Fit the private GGM model to data
+        
+        Args:
+            X: Data matrix of shape (n_samples, n_features)
+        """
+        n, d = X.shape
+        assert d == self.d
+        
+        # Compute empirical covariance matrix once and store it
+        self.empirical_cov = (X.T @ X) / n
+        
+        # 1. Private mean estimation (assuming centered for now)
+        # TODO: Implement if needed
+        
+        # 2. Private diagonal entries - measure all at once
+        diag_sensitivity = self.get_sensitivity(n)
+        for i in range(d):
+            self.Sigma_tilde[i,i], _ = gaussian_mechanism(
+                self.rng,
+                self.empirical_cov[i,i],
+                diag_sensitivity, 
+                self.rho_v / d
+            )
+            self.measured_entries.add((i,i))
+        
+        # 3. Iterative off-diagonal measurements
+        cov_sensitivity = self.get_sensitivity(n)
+        score_sensitivity = self.get_score_sensitivity(n)
+        
+        for t in range(self.max_iters):
+            print(f"Iteration {t+1}/{self.max_iters}")
+            
+            # Get current estimate using consistent optimization method
+            Sigma_hat = self.get_current_estimate()
+            
+            # Compute scores for unmeasured off-diagonal entries
+            scores = self.compute_entry_scores(Sigma_hat)
+            
+            # Flatten only the upper triangular part for selection
+            candidate_pairs = []
+            candidate_scores = []
+            for i in range(self.d):
+                for j in range(i+1, self.d):
+                    if (i,j) not in self.measured_entries:
+                        candidate_pairs.append((i,j))
+                        candidate_scores.append(scores[i,j])
+            
+            if not candidate_pairs:
+                print(f"No more entries to measure at iteration {t+1}")
+                break
+                
+            # Select entry using exponential mechanism
+            selected_idx = exponential_mechanism(
+                self.rng,
+                np.array(candidate_scores),
+                score_sensitivity,
+                self.rho_s / self.max_iters
+            )
+            
+            i, j = candidate_pairs[selected_idx]
+            print(f"Selected entry ({i},{j}) with score {candidate_scores[selected_idx]:.6f}")
+            
+            # Measure selected entry using stored empirical covariance
+            empirical_cov_ij = self.empirical_cov[i,j]
+            noisy_cov, noise_var = gaussian_mechanism(
+                self.rng,
+                empirical_cov_ij,
+                cov_sensitivity,
+                self.rho_c / self.max_iters
+            )
+            
+            self.Sigma_tilde[i,j] = noisy_cov
+            self.Sigma_tilde[j,i] = noisy_cov  # Symmetric
+            self.measured_entries.add((i,j))
+            
+            print(f"Empirical: {empirical_cov_ij:.6f}, Noisy: {noisy_cov:.6f}, Noise std: {np.sqrt(noise_var):.6f}")
+        
+        # Final estimate
+        self.Sigma_hat = self.get_current_estimate()
+        return self.Sigma_tilde, self.Sigma_hat
+
+    def get_current_estimate(self):
+        """Get current covariance estimate using specified optimization method"""
+        if self.optimizer == "pgd-maxent":
+            inds = get_observed_Sigma_entries(self.Sigma_tilde)
+            return pgd_maxent(self.Sigma_tilde, inds, max_iters=1000, eta=0.1, tol=1e-6, verbose=False)
+        
+        elif self.optimizer == "lbfgs":
+            # Convert measured_entries to array format expected by optimize_lbfgs
+            measured_array = np.array([[i,j] for i,j in self.measured_entries])
+            z_init = initialize_z(self.Sigma_tilde, measured_array)
+            
+            z_opt, _, _ = optimize_lbfgs(
+                self.Sigma_tilde[measured_array[:,0], measured_array[:,1]], 
+                z_init, 
+                measured_array, 
+                self.d, 
+                max_iters=100, 
+                verbose=False
+            )
+            K_z = get_K(z_opt, measured_array, self.d)
+            return np.linalg.inv(K_z)
+        
+        else:
+            raise ValueError(f"Unknown optimizer: {self.optimizer}")
