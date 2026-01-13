@@ -4,9 +4,152 @@ import os
 import json
 from sklearn.preprocessing import MinMaxScaler
 
+def load_data(data_dir, data_name="housing", target_column=None, drop_columns=None):
+    """
+    Load a dataset from a CSV file, optionally excluding a target variable and other columns.
+    Automatically handles preprocessing: keeps only numerical columns, removes rows with NaNs.
+    
+    Args:
+        data_dir (str): Directory containing the CSV file
+        data_name (str): Name of the dataset (without .csv extension). Defaults to 'housing'.
+        target_column (str, optional): Name of the target variable column to exclude. 
+                                     For regression datasets, this column will be dropped
+                                     as we don't want it in the covariance estimation.
+        drop_columns (list, optional): List of additional column names to drop 
+                                     (e.g., categorical variables, IDs, etc.)
+                                     If None, all non-numerical columns are automatically dropped,
+                                     along with common identifier columns (Order, PID, ID, etc.).
+        
+    Returns:
+        pd.DataFrame: The loaded dataset as a pandas DataFrame, cleaned and ready for use.
+                     Only numerical columns, no missing values, specified columns dropped.
+    """
+    data_path = os.path.join(data_dir, f"{data_name}.csv")
+    if not os.path.exists(data_path):
+        raise FileNotFoundError(f"{data_name} dataset not found at {data_path}")
+    
+    # Try different encodings
+    for encoding in ['utf-8', 'latin-1', 'iso-8859-1', 'cp1252']:
+        try:
+            df = pd.read_csv(data_path, encoding=encoding)
+            if encoding != 'utf-8':
+                print(f"Successfully loaded {data_name} with encoding: {encoding}")
+            break
+        except (UnicodeDecodeError, UnicodeError):
+            continue
+    else:
+        raise UnicodeDecodeError(f"Could not decode {data_path} with any common encoding")
+    
+    print(f"Loaded {data_name}: {df.shape[0]} rows × {df.shape[1]} columns")
+    
+    # If drop_columns is None, automatically drop all non-numerical columns
+    if drop_columns is None:
+        # Keep only numerical columns
+        numerical_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+        non_numerical_cols = df.select_dtypes(exclude=[np.number]).columns.tolist()
+        if non_numerical_cols:
+            print(f"Auto-dropping {len(non_numerical_cols)} non-numerical columns: {non_numerical_cols}")
+            df = df[numerical_cols]
+        
+        # Also drop common identifier columns
+        id_patterns = ['order', 'pid', 'id', 'index', 'year', 'date']
+        id_cols_to_drop = []
+        for col in df.columns:
+            col_lower = col.lower().replace('_', '').replace(' ', '')
+            if col_lower in id_patterns or col_lower.endswith('id'):
+                id_cols_to_drop.append(col)
+        
+        if id_cols_to_drop:
+            print(f"Auto-dropping {len(id_cols_to_drop)} identifier-like columns: {id_cols_to_drop}")
+            df = df.drop(columns=id_cols_to_drop)
+    else:
+        # User specified columns to drop
+        columns_to_drop = []
+        for col in drop_columns:
+            if col not in df.columns:
+                print(f"Warning: Column '{col}' not found in dataset, skipping")
+            else:
+                columns_to_drop.append(col)
+        if columns_to_drop:
+            df = df.drop(columns=columns_to_drop)
+    
+    # Drop target column if specified
+    if target_column is not None:
+        if target_column not in df.columns:
+            print(f"Warning: Target column '{target_column}' not found in dataset")
+        else:
+            print(f"Dropping target column: {target_column}")
+            df = df.drop(columns=[target_column])
+    
+    # Drop rows with any missing values
+    rows_before = len(df)
+    df = df.dropna()
+    rows_after = len(df)
+    if rows_before > rows_after:
+        print(f"Dropped {rows_before - rows_after} rows with missing values ({rows_before} → {rows_after})")
+    
+    print(f"Final dataset: {df.shape[0]} rows × {df.shape[1]} columns")
+    print(f"Columns: {list(df.columns)}")
+    
+    return df
+
+def compute_and_save_bounds(data_df, outdir, rescale=True):
+    """
+    Compute L2 and Linf bounds for a dataset and save them to a JSON file.
+    
+    PRIVACY WARNING: This function computes bounds from the actual data,
+    which may leak information. In a production DP setting, bounds should be
+    provided by the data analyst based on domain knowledge, not computed
+    from the data itself.
+    
+    Args:
+        data_df (pd.DataFrame): Input dataset
+        outdir (str): Directory to save the bounds file
+        rescale (bool): Whether to rescale the data to [-1,1] before computing bounds
+        
+    Returns:
+        str: Path to the saved bounds file
+    """
+
+    if rescale:
+        data_df = rescale_data(data_df)
+        L2_bound = np.sqrt(data_df.shape[1])  # Same as synthetic case
+        Linf_bound = 1  # Due to [-1,1] rescaling
+        print(f"   Using analytical bounds after rescaling: L2={L2_bound:.3f}, Linf={Linf_bound}")
+    else:
+        X = data_df.to_numpy()
+        # Get L2 bound on row entries
+        L2_bound = np.linalg.norm(X, axis=1).max()
+        # Get L_infinity bound on row entries
+        Linf_bound = np.max(np.abs(X))
+        print(f"   Computed empirical bounds from data: L2={L2_bound:.3f}, Linf={Linf_bound:.3f}")
+        print("⚠️  WARNING: Computing bounds from data itself - not DP-compliant!")
+        print("   In practice, bounds should be provided by analyst based on domain knowledge.")
+    
+    
+    bounds_path = os.path.join(outdir, f"L_bounds_rescale{rescale}.json")
+    d = data_df.shape[1]
+    
+    # Load existing bounds if file exists
+    if os.path.exists(bounds_path):
+        with open(bounds_path, "r") as f:
+            bounds = json.load(f)
+    else:
+        bounds = {}
+    
+    bounds[str(d)] = {"l2": float(L2_bound), "linf": float(Linf_bound)}
+    
+    with open(bounds_path, "w") as f:
+        json.dump(bounds, f, indent=4)
+        
+    return bounds_path
+
 def generate_well_conditioned_gaussian(rng, outdir, n_samples, d, rescale, cond_max=10.0):
     """
     Generates synthetic multivariate Gaussian data with a well-conditioned SPD covariance matrix.
+    
+    DP-COMPLIANT: Bounds are computed analytically from known data distribution,
+    not from the actual data values, preserving differential privacy.
 
     Args:
     - n_samples: Number of data points.
@@ -35,9 +178,9 @@ def generate_well_conditioned_gaussian(rng, outdir, n_samples, d, rescale, cond_
 
     if rescale:
         df = rescale_data(df)
-        L2_bound = 2 * np.sqrt(d)
-        #print("L2 bound at origin", L2_bound)
+        L2_bound = np.sqrt(d)
         Linf_bound = 1
+        print(f"✅ Analytical bounds (DP-compliant): L2={L2_bound:.3f}, Linf={Linf_bound}")
 
     #print("saving this data:", df)
 
@@ -106,9 +249,6 @@ def load_and_process_data(data_path, bounds_path, clip_type="linf"):
     data = pd.read_csv(data_path)
     n, d = data.shape
 
-    # Compute the covariance matrix.
-    Sigma_true = data.cov().to_numpy()
-
     # Load bound values from the JSON file.
     with open(bounds_path, "r") as f:
         bounds = json.load(f)
@@ -139,6 +279,9 @@ def load_and_process_data(data_path, bounds_path, clip_type="linf"):
 
     # Replace the data in the DataFrame with the clipped values.
     data = pd.DataFrame(X_clipped, columns=data.columns)
+    
+    # Compute the covariance matrix from the CLIPPED data.
+    Sigma_true = data.cov().to_numpy()
 
     # print(f"Data loaded from {data_path}")
     # print(f"Dimension: {d}, Number of samples: {n}")

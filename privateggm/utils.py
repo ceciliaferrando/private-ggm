@@ -67,7 +67,7 @@ def initialize_z(Sigma_tilde, inds):
     return jnp.array(z_init)
 
 
-def project_to_PSD(Sigma, thresh):
+def project_to_PSD(Sigma, thresh=1e-3):
     eigvals, eigvecs = jnp.linalg.eigh(Sigma)
     eigvals = jnp.maximum(eigvals, thresh)  # ensure a minimum positive threshold
     return eigvecs @ jnp.diag(eigvals) @ eigvecs.T
@@ -178,7 +178,7 @@ def generate_chain_structure(Sigma_true):
 
 import numpy as np
 
-def generate_random_offdiag_structure(Sigma_true, percentage=0.5):
+def generate_random_offdiag_structure(Sigma_true, percentage=0.5, rng=None):
     """
     Generate a structure where the cov matrix has its diagonal
     entries preserved and a percentage of the lower triangle
@@ -189,6 +189,7 @@ def generate_random_offdiag_structure(Sigma_true, percentage=0.5):
     Parameters:
     - Sigma_true: np.array, true covariance matrix.
     - percentage: float, percentage of lower triangle off-diagonal entries to retain (default: 0.5).
+    - rng: np.random.Generator, random number generator for reproducibility (optional).
 
     Returns:
     - Sigma_tilde: np.array, covariance matrix with random off-diagonals.
@@ -209,8 +210,11 @@ def generate_random_offdiag_structure(Sigma_true, percentage=0.5):
     num_lower_triangle = len(lower_triangle_indices)
     num_to_retain = int(percentage * num_lower_triangle)
 
-    # randomly select indices to retain
-    retain_indices = np.random.choice(lower_triangle_indices, size=num_to_retain, replace=False)
+    # randomly select indices to retain using the provided RNG or global random
+    if rng is not None:
+        retain_indices = rng.choice(lower_triangle_indices, size=num_to_retain, replace=False)
+    else:
+        retain_indices = np.random.choice(lower_triangle_indices, size=num_to_retain, replace=False)
 
     # Create a flattened version of Sigma_tilde and assign the retained values
     Sigma_tilde_flat = Sigma_tilde.flatten()
@@ -396,3 +400,58 @@ def mahalanobis_cov_error(Sigma, Sigma_hat):
 #     plot_filename = os.path.join(results_dir, f"{dataset_name}_mahalanobis_plot.png")
 #     plt.savefig(plot_filename, dpi=300, bbox_inches='tight')
 #     print(f"Plot saved to {plot_filename}")
+
+
+# === Entry-wise Analysis Utilities ===
+
+def create_observation_mask(inds, d):
+    """Create observation mask from indices."""
+    mask = np.zeros((d, d), dtype=bool)
+    # Diagonal is always observed
+    np.fill_diagonal(mask, True)
+    # Add observed off-diagonal entries
+    for i, j in inds:
+        mask[i, j] = True
+        mask[j, i] = True  # Symmetric
+    return mask
+
+def compute_entry_wise_errors(Sigma_true, Sigma_est, mask):
+    """Compute errors separately for observed and unobserved entries."""
+    observed_errors = []
+    unobserved_errors = []
+    
+    d = Sigma_true.shape[0]
+    for i in range(d):
+        for j in range(i, d):  # Upper triangle including diagonal
+            error = (Sigma_true[i, j] - Sigma_est[i, j]) ** 2
+            if mask[i, j]:
+                observed_errors.append(error)
+            else:
+                unobserved_errors.append(error)
+    
+    obs_mse = np.mean(observed_errors) if observed_errors else 0.0
+    unobs_mse = np.mean(unobserved_errors) if unobserved_errors else 0.0
+    n_obs = len(observed_errors)
+    n_unobs = len(unobserved_errors)
+    
+    return obs_mse, unobs_mse, n_obs, n_unobs
+
+def compute_frobenius_breakdown(Sigma_true, Sigma_est, mask):
+    """Compute Frobenius norm breakdown for observed vs unobserved entries."""
+    d = Sigma_true.shape[0]
+    observed_sum = 0.0
+    unobserved_sum = 0.0
+    
+    for i in range(d):
+        for j in range(d):
+            error_sq = (Sigma_true[i, j] - Sigma_est[i, j]) ** 2
+            if mask[i, j]:
+                observed_sum += error_sq
+            else:
+                unobserved_sum += error_sq
+    
+    return np.sqrt(observed_sum), np.sqrt(unobserved_sum)
+
+def frobenius_error(A, B):
+    """Compute the Frobenius norm of the difference between two matrices."""
+    return np.linalg.norm(A - B, ord='fro')

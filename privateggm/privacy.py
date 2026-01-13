@@ -13,7 +13,7 @@ def cov_sensitivity_l2(n, R):
 
 
 def cov_jk_sensitivity_linf(n, B):
-    Delta_cov_jk = np.sqrt(2) * B**2 / n
+    Delta_cov_jk = 2 * B**2 / n
     return Delta_cov_jk
 
 
@@ -39,27 +39,35 @@ def exponential_mechanism(rng, flat_scores, Delta_cov_jk, rho):
     return worst_off_diag_index
 
 
-def SSP_covariance(cov_matrix, cov_sensitivity, rho):
+def SSP_covariance(cov_matrix, cov_sensitivity, rho, rng=None, ssp_seed=1):
     """
+    Simultaneous Structured Perturbation for covariance matrices.
+    
     See Overleaf for derivation
     """
 
     d, _ = cov_matrix.shape
 
-    # tri = np.triu(np.random.normal(0, 1, (d, d)))
-    # Zsym = tri + tri.T - np.diag(np.diag(tri))
+    # Use the provided RNG for proper randomness across trials
+    if rng is None:
+        ssp_rng = np.random.default_rng(ssp_seed)
+    else:
+        # Use the provided RNG directly to ensure different noise per trial
+        ssp_rng = rng
 
     # #noise_scale = (2 * np.log(1.25/delta) * cov_sensitivity**2) / epsilon**2
-    noise_scale = cov_sensitivity / np.sqrt(2 * rho)
-    print(f"SSP noise scale: {noise_scale}")
+    noise_scale = cov_sensitivity / np.sqrt(2 * rho) # add/remove one
+    print(f"noise scale SSP: {noise_scale}")
 
-    # # leveraging scaling property of normal distributions
-    # cov_dp = cov_matrix + noise_scale * Zsym
-    tri = np.triu(np.random.normal(0, noise_scale, (d, d)))
+    # Generate symmetric noise matrix using the dedicated SSP RNG
+    tri = np.triu(ssp_rng.normal(0, noise_scale, (d, d)))
     Zsym = tri + tri.T - np.diag(np.diag(tri))
     cov_dp = cov_matrix + Zsym
+    
+    # project to PSD, which is also done for PrivateGGM. Use the same threshold
+    cov_dp = project_to_PSD(cov_dp, thresh=1e-3)
 
-    return cov_dp
+    return cov_dp, noise_scale
 
 
 def gaussian_mechanism(rng, obj, sensitivity, rho):
@@ -73,14 +81,14 @@ def gaussian_mechanism(rng, obj, sensitivity, rho):
 
     Returns:
     - noisy_obj: np.array, the output of the function f with Gaussian noise added.
+    - noise: np.array, the actual noise sample that was added.
     """
-    noise_scale = sensitivity / np.sqrt(2 * rho)
-    print("noise scale MaxEnt: ", noise_scale)
+    noise_scale = sensitivity / np.sqrt(2 * rho) # add/remove one
     noise = rng.normal(0, noise_scale, size=obj.shape)
-
+    
     noisy_obj = obj + noise
-
-    return noisy_obj, noise
+    
+    return noisy_obj, noise, noise_scale
 
 
 def privatize_Sigma_tilde(rng, Sigma_tilde_vec, inds, d, Delta_cov_jk, rho):
@@ -98,12 +106,14 @@ def privatize_Sigma_tilde(rng, Sigma_tilde_vec, inds, d, Delta_cov_jk, rho):
     - Sigma_tilde: np.array, the privatized covariance matrix.
     """
     # Distribute budget across all observed Sigma_tilde entries
-    lowertri_inds_num = len(inds) // 2  # Only need to privatize lower triangle elements
-    rho_per_entry = rho / lowertri_inds_num
+    # inds includes diagonal + lower triangle
+    diag_and_lowertri_inds_num = len(inds)  # Only need to privatize lower triangle elements
+    rho_per_entry = rho / diag_and_lowertri_inds_num
 
     # Apply the Gaussian mechanism to privatize the entries
     #print("MAXENT SENSITIVITY", Delta_cov_jk)
-    Sigma_tilde_vec_dp, noise_components = gaussian_mechanism(rng, Sigma_tilde_vec, Delta_cov_jk, rho_per_entry)
+    Sigma_tilde_vec_dp, noise_components, noise_scale = gaussian_mechanism(rng, Sigma_tilde_vec, Delta_cov_jk, rho_per_entry)
+    print(f"noise scale MaxEnt (privatize_Sigma_tilde): {noise_scale}")
 
     # Reconstruct the full covariance matrix from the vectorized version
     Sigma_tilde_dp = reconstruct_sigma_tilde(inds, Sigma_tilde_vec_dp, d)
@@ -129,4 +139,4 @@ def privatize_Sigma_tilde(rng, Sigma_tilde_vec, inds, d, Delta_cov_jk, rho):
     # Ensure the matrix is symmetric
     assert np.allclose(Sigma_tilde_dp, Sigma_tilde_dp.T), "Sigma_tilde is not symmetric"
 
-    return Sigma_tilde_dp, Sigma_tilde_vec_dp
+    return Sigma_tilde_dp, Sigma_tilde_vec_dp, noise_scale
