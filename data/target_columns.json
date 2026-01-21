@@ -2,5 +2,6 @@
   "Adult": "class",
   "SeoulBikeData": "Rented Bike Count",
   "BreastCancerWisconsin": "Diagnosis",
-  "LifeExpectancy": null
+  "LifeExpectancy": null,
+  "communities_crime": "ViolentCrimesPerPop"
 }
