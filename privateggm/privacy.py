@@ -57,7 +57,7 @@ def SSP_covariance(cov_matrix, cov_sensitivity, rho, rng=None, ssp_seed=1):
 
     # #noise_scale = (2 * np.log(1.25/delta) * cov_sensitivity**2) / epsilon**2
     noise_scale = cov_sensitivity / np.sqrt(2 * rho) # add/remove one
-    print(f"noise scale SSP: {noise_scale}")
+    print(f" %%%%% noise scale SSP: {noise_scale} %%%%%")
 
     # Generate symmetric noise matrix using the dedicated SSP RNG
     tri = np.triu(ssp_rng.normal(0, noise_scale, (d, d)))

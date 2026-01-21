@@ -180,7 +180,7 @@ def generate_well_conditioned_gaussian(rng, outdir, n_samples, d, rescale, cond_
         df = rescale_data(df)
         L2_bound = np.sqrt(d)
         Linf_bound = 1
-        print(f"✅ Analytical bounds (DP-compliant): L2={L2_bound:.3f}, Linf={Linf_bound}")
+        print(f"Analytical bounds: L2={L2_bound:.3f}, Linf={Linf_bound}")
 
     #print("saving this data:", df)
 
@@ -229,7 +229,7 @@ def rescale_data(data):
     return scaled_df
 
 
-def load_and_process_data(data_path, bounds_path, clip_type="linf"):
+def load_and_process_data(data_path, bounds_path, clip_type="linf", rescale=None):
     """
     Load and preprocess the data from a CSV file, and compute relevant quantities.
 
@@ -237,6 +237,8 @@ def load_and_process_data(data_path, bounds_path, clip_type="linf"):
         data_path (str): Path to the CSV dataset.
         bounds_path (str): Path to the JSON file containing the bound values.
         clip_type (str): Which norm bound to use for clipping, either "l2" or "linf".
+        rescale (bool): Whether the data is rescaled. Must match the bounds file used.
+                       If None, will infer from bounds_path filename.
 
     Returns:
         data (pd.DataFrame): Preprocessed and optionally clipped data.
@@ -245,6 +247,22 @@ def load_and_process_data(data_path, bounds_path, clip_type="linf"):
         Sigma_true (np.array): Covariance matrix of the data.
         T (float): The clipping bound used (either ℓ₂ bound or ℓ∞ bound).
     """
+    # Infer rescale from bounds_path if not provided
+    if rescale is None:
+        if "rescaleTrue" in bounds_path:
+            rescale = True
+        elif "rescaleFalse" in bounds_path:
+            rescale = False
+        else:
+            raise ValueError(f"Cannot infer rescale setting from bounds_path: {bounds_path}. "
+                           "Please specify rescale=True or rescale=False explicitly.")
+    
+    # Validate bounds file matches rescale setting
+    expected_bounds_file = f"L_bounds_rescale{rescale}.json"
+    if expected_bounds_file not in bounds_path:
+        raise ValueError(f"Bounds file mismatch! rescale={rescale} but bounds_path={bounds_path}. "
+                       f"Expected bounds file to contain '{expected_bounds_file}'")
+    
     # Load the data from CSV.
     data = pd.read_csv(data_path)
     n, d = data.shape
@@ -266,6 +284,17 @@ def load_and_process_data(data_path, bounds_path, clip_type="linf"):
 
     # Convert the DataFrame to a numpy array.
     X = data.to_numpy()
+    
+    # Sanity check: if rescaled, data should be approximately in [-1, 1]
+    if rescale:
+        data_min, data_max = X.min(), X.max()
+        if data_min < -1.1 or data_max > 1.1:
+            raise ValueError(f"Data range [{data_min:.3f}, {data_max:.3f}] is outside expected "
+                           f"rescaled range [-1, 1]. Did you forget to rescale the data?")
+        if clip_type.lower() == "linf" and T != 1.0:
+            import warnings
+            warnings.warn(f"Using rescale=True but Linf bound is {T}, expected 1.0. "
+                        "This may indicate a bounds file mismatch.")
 
     # Clip the data according to the chosen norm.
     if clip_type.lower() == "l2":

@@ -284,9 +284,9 @@ def pgd_maxent(Sigma_tilde, inds, max_iters=1000, eta=0.01, tol=1e-8, verbose=Tr
         z_opt, g_vals, obj_vals = optimize_lbfgs(Sigma_psd_vec, z_init, inds, d, max_iters=1000, verbose=False)
         K_z_opt = get_K(z_opt, inds, d)
         Sigma_opt_before = np.linalg.inv(K_z_opt)
-        print(f"Before projection - min eigval: {np.min(np.linalg.eigvals(Sigma_opt_before)):.2e}, Frobenius diff after projection: {np.linalg.norm(project_to_PSD(Sigma_opt_before, thresh=1e-3) - Sigma_opt_before, 'fro'):.2e}")
+        # print(f"Before projection - min eigval: {np.min(np.linalg.eigvals(Sigma_opt_before)):.2e}, Frobenius diff after projection: {np.linalg.norm(project_to_PSD(Sigma_opt_before, thresh=1e-3) - Sigma_opt_before, 'fro'):.2e}")
         Sigma_opt = project_to_PSD(Sigma_opt_before)  # Ensure PSD, TO-DO check if needed
-        print(f"After projection - min eigval: {np.min(np.linalg.eigvals(Sigma_opt)):.2e}, max eigval: {np.max(np.linalg.eigvals(Sigma_opt)):.2e}, cond num: {np.max(np.linalg.eigvals(Sigma_opt))/np.min(np.linalg.eigvals(Sigma_opt)):.2e}")
+        # print(f"After projection - min eigval: {np.min(np.linalg.eigvals(Sigma_opt)):.2e}, max eigval: {np.max(np.linalg.eigvals(Sigma_opt)):.2e}, cond num: {np.max(np.linalg.eigvals(Sigma_opt))/np.min(np.linalg.eigvals(Sigma_opt)):.2e}")
 
     except Exception as e:
         print(f"Optimization failed: {str(e)}")
@@ -389,6 +389,7 @@ class IterativePrivateGGM:
         X_centered = X - X.mean(axis=0)
         
         # Compute empirical covariance matrix once and store it
+        # CHANGED IT TO CENTERED
         self.empirical_cov = (X_centered.T @ X_centered) / n
         
         # 1. Private mean estimation (assuming centered for now)
@@ -405,11 +406,14 @@ class IterativePrivateGGM:
             )
             self.measured_entries.add((i,i))
         self.actual_diag_noise_scale = noise_scale  # Save for output
-        print(f"noise scale MaxEnt (diagonal): {noise_scale}")
-        
+        print(f"%%%%% noise scale PGD-MaxEnt (diagonal): {noise_scale} %%%%%")
+
         # 3. Iterative off-diagonal measurements
-        cov_sensitivity = self.get_sensitivity(n)
+        cov_entry_sensitivity = self.get_sensitivity(n)
         score_sensitivity = self.get_score_sensitivity(n)
+        
+        # Print expected noise scale for off-diagonal measurements (constant across iterations)
+        expected_offdiag_noise_scale = cov_entry_sensitivity / np.sqrt(2 * self.rho_c / self.n_measurements)
         
         for t in range(self.n_measurements):
             print(f"Iteration {t+1}/{self.n_measurements}")
@@ -449,17 +453,18 @@ class IterativePrivateGGM:
             noisy_cov, noise_sample, noise_scale = gaussian_mechanism(
                 self.rng,
                 empirical_cov_ij,
-                cov_sensitivity,
+                cov_entry_sensitivity,
                 self.rho_c / self.n_measurements
             )
             self.actual_offdiag_noise_scale = noise_scale  # Save for output
-            print(f"noise scale MaxEnt (measurement): {noise_scale}")
             
             self.Sigma_tilde[i,j] = noisy_cov
             self.Sigma_tilde[j,i] = noisy_cov  # Symmetric
             self.measured_entries.add((i,j))
             
             print(f"Empirical: {empirical_cov_ij:.6f}, Noisy: {noisy_cov:.6f}, Noise std: {noise_scale:.6f}")
+
+        print(f"%%%%% noise scale PGD-MaxEnt (measurement): {expected_offdiag_noise_scale} %%%%%")
         
         # Final estimate
         self.Sigma_hat = self.get_current_estimate()
