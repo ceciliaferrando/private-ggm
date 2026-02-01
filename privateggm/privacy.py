@@ -22,9 +22,15 @@ def cov_jk_sensitivity_l2(n, R):
 
 
 def exponential_mechanism(rng, flat_scores, Delta_cov_jk, rho):
+    # note about privacy conversion:
+    # ρ_cost = ε² / 8   --->   ε = √(8ρ) = 2√(2ρ)
+    # ρ_cost = (2√ρ)² / 8 = 4ρ / 8 = ρ/2
+
     # compute the log of the unnormalized probabilities
-    log_unnorm_probabilities = ((2 * np.sqrt(rho)) / (2 * Delta_cov_jk)) * np.array(
-        flat_scores)
+    # log_unnorm_probabilities = ((2 * np.sqrt(rho)) / (2 * Delta_cov_jk)) * np.array(
+    #     flat_scores)
+    log_unnorm_probabilities = ((2 * np.sqrt(2 * rho)) / (2 * Delta_cov_jk)) * np.array(
+          flat_scores)
 
     # compute log-sum-exp to normalize probabilities
     log_prob_sum = logsumexp(log_unnorm_probabilities)
