@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.linalg import solve, cholesky, eigh
+from scipy.optimize import line_search
 import jax
 jax.config.update("jax_enable_x64", True)
 import jax.numpy as jnp
@@ -43,7 +44,7 @@ def optimize_lbfgs(Sigma_tilde_vec, z, inds, d, max_iters=100, verbose=False):
     d [int]: number of attributes
     """
 
-    rng_key = jrandom.PRNGKey(42)
+    # rng_key = jrandom.PRNGKey(42)
 
     # Linesearch
     linesearch = optax.scale_by_zoom_linesearch(max_linesearch_steps=15)
@@ -213,95 +214,253 @@ def mirror_descent(Sigma_init, Sigma_tilde, inds, tau, max_iters=20000, eta_init
     return Sigma, K
 
 
-def projected_gradient_descent(S_observed, mask, weights=None, eta=0.1, max_iters=1000, tol=1e-8):
+def backtracking_line_search(Sig, g, obj_fn, eta=0.1, c1=0.1, beta=0.8, max_ls=20, 
+                              project_fn=None, debug_iter=None):
+    """
+    Backtracking line search with optional PSD projection and non-monotone fallback.
+    
+    Args:
+        Sig: Current point (matrix)
+        g: Gradient at current point
+        obj_fn: Objective function
+        eta: Initial step size
+        c1: Sufficient decrease parameter
+        beta: Step size reduction factor
+        max_ls: Maximum line search iterations
+        project_fn: Optional projection function (e.g., project_to_PSD)
+        debug_iter: If provided, print debug info for this iteration
+        
+    Returns:
+        Sig_new: New point after line search
+        step: Final step size used
+        ls: Number of line search iterations
+    """
+    step, ls = eta, 0
+    obj_curr = obj_fn(Sig)
+    best_Sig, best_obj, best_step = Sig.copy(), obj_curr, 0.0
+    
+    # DEBUG: For first few iterations, track what happens
+    debug_this = debug_iter is not None and debug_iter <= 3
+    
+    while ls < max_ls:
+        Sig_candidate = Sig - step * g
+        
+        if debug_this and ls == 0 and project_fn is not None:
+            print(f"    [LS DEBUG iter {debug_iter}] Before projection: diag={np.diag(Sig_candidate)[:3]}")
+            cand_eigvals = np.linalg.eigvalsh(Sig_candidate)
+            print(f"    [LS DEBUG iter {debug_iter}] Before projection: min_eigval={np.min(cand_eigvals):.6e}")
+        
+        # Apply projection if provided
+        if project_fn is not None:
+            Sig_new = project_fn(Sig_candidate)
+        else:
+            Sig_new = Sig_candidate
+        
+        if debug_this and ls == 0 and project_fn is not None:
+            print(f"    [LS DEBUG iter {debug_iter}] After projection: diag={np.diag(Sig_new)[:3]}")
+            new_eigvals = np.linalg.eigvalsh(Sig_new)
+            print(f"    [LS DEBUG iter {debug_iter}] After projection: min_eigval={np.min(new_eigvals):.6e}")
+        
+        obj_new = obj_fn(Sig_new)
+        
+        # Track best point found (non-monotone)
+        if obj_new < best_obj:
+            best_Sig = Sig_new.copy()
+            best_obj = obj_new
+            best_step = step
+        
+        # Check sufficient decrease
+        sufficient_decrease = obj_curr - c1 * np.linalg.norm(Sig_new - Sig, 'fro')
+        if obj_new <= sufficient_decrease:
+            if debug_this:
+                print(f"    [LS DEBUG iter {debug_iter}] SUCCESS at ls={ls}: obj_new={obj_new:.6e} <= {sufficient_decrease:.6e}")
+            return Sig_new, step, ls
+        
+        if debug_this and ls == 0:
+            print(f"    [LS DEBUG iter {debug_iter}] FAIL at ls={ls}: obj_new={obj_new:.6e} > {sufficient_decrease:.6e}")
+            print(f"    [LS DEBUG iter {debug_iter}] obj_curr={obj_curr:.6e}, norm={np.linalg.norm(Sig_new - Sig, 'fro'):.6e}")
+        
+        step *= beta
+        ls += 1
+    
+    # Non-monotone: return best found even if sufficient decrease not met
+    if debug_this:
+        print(f"    [LS DEBUG iter {debug_iter}] Exhausted line search, returning best: obj={best_obj:.6e}")
+    return best_Sig, best_step, ls
+
+
+def projected_gradient_descent(S_observed, mask, weights=None, eta=0.1, max_iters=1000, tol=1e-8, verbose=False):
+    """
+    Projected gradient descent with backtracking line search.
+    """
+    import time
+    start_time = time.time()
+    
     d = S_observed.shape[0]
-
-    # Ensure mask is 2D boolean array w/ matching shape
-    assert mask.shape == S_observed.shape, "Mask must match matrix dimensions"
-
-    # 0. Set up weights (default to uniform if not provided)
-    if weights is None:
-        weight_matrix = np.ones_like(S_observed)
-    else:
-        weight_matrix = weights.copy()
-        
-        # Cap the weight ratio to prevent extreme imbalance
-        # This trades off statistical optimality for numerical stability
-        if np.any(mask):
-            min_weight = np.min(weight_matrix[mask])
-            max_weight = np.max(weight_matrix[mask])
-            weight_ratio = max_weight / min_weight if min_weight > 0 else 1.0
-            
-            # Cap ratio at 100 (conservative)
-            max_allowed_ratio = 100.0
-            if weight_ratio > max_allowed_ratio:
-                # Clip weights to reduce ratio
-                # Strategy: raise the floor (increase min weights) rather than lower ceiling
-                target_min_weight = max_weight / max_allowed_ratio
-                weight_matrix[mask] = np.maximum(weight_matrix[mask], target_min_weight)
-                new_ratio = np.max(weight_matrix[mask]) / np.min(weight_matrix[mask])
-                print(f"  [PGD] Capping weight ratio: {weight_ratio:.1f} -> {new_ratio:.1f}")
-        
-        # Scale weights to prevent overflow in gradient computation
-        max_weight = np.max(weight_matrix[mask]) if np.any(mask) else 1.0
-        weight_scale = max(1.0, max_weight / 1000.0)  # Normalize to ~1000 max weight
-        weight_matrix = weight_matrix / weight_scale
-
-    # Use fixed learning rate (no adaptive scaling needed with capped weights)
-    eta_adjusted = eta 
-
-    # 1. set unobserved entries to 0
+    assert mask.shape == S_observed.shape
+    
+    # Setup
+    weight_matrix = np.ones_like(S_observed) if weights is None else weights.copy()
     S = np.zeros_like(S_observed)
-    S[mask] = S_observed[mask]  # Correct 2D indexing
-
-    # 2. PSD projection
+    S[mask] = S_observed[mask]
+    
+    # Define objective and gradient functions early for debug
+    def obj(Sig): return 0.5 * np.sum(weight_matrix[mask] * (Sig[mask] - S[mask])**2)
+    
+    def grad(Sig):
+        g = np.zeros_like(Sig)
+        g[mask] = weight_matrix[mask] * (Sig[mask] - S[mask])
+        g += np.diag(np.diag(g))  # Double diagonal
+        return g
+    
+    # DEBUG: Check if S needs PSD projection
+    S_eigvals = np.linalg.eigvalsh(S)
+    needs_projection = np.any(S_eigvals < 0)
+    if needs_projection:
+        print(f"  [PGD INIT] S has negative eigenvalues: min={np.min(S_eigvals):.6e}, needs PSD projection")
+        print(f"  [PGD INIT] S diagonal before projection: {np.diag(S)}")
+    
     Sigma = project_to_PSD(S, thresh=1e-3)
-
-    prev_Sigma = Sigma.copy()
+    
+    if needs_projection:
+        Sigma_eigvals = np.linalg.eigvalsh(Sigma)
+        print(f"  [PGD INIT] After projection: min_eigval={np.min(Sigma_eigvals):.6e}")
+        print(f"  [PGD INIT] Sigma diagonal after projection: {np.diag(Sigma)}")
+        
+        # Check objective and gradient at initial point
+        init_obj = obj(Sigma)
+        init_grad = grad(Sigma)
+        init_grad_norm = np.linalg.norm(init_grad)
+        print(f"  [PGD INIT] Initial objective: {init_obj:.6e}")
+        print(f"  [PGD INIT] Initial gradient norm: {init_grad_norm:.6e}")
+        print(f"  [PGD INIT] Initial gradient diagonal: {np.diag(init_grad)}")
+    
+    # # COMMENTED OUT: Random control for line search validation
+    # # Create random control (fixed seed, truly random PSD matrix)
+    # rng = np.random.default_rng(42)
+    # A = (rng.normal(0, 1, (d, d)) + rng.normal(0, 1, (d, d)).T) / 2
+    # eigvals, eigvecs = np.linalg.eigh(A)
+    # # Use random eigenvalues scaled to be similar magnitude to S
+    # random_eigvals = np.abs(eigvals) * np.mean(np.abs(np.diag(S)))
+    # Sigma_rand = eigvecs @ np.diag(random_eigvals + 0.1) @ eigvecs.T
+    # Sigma_rand = project_to_PSD(Sigma_rand, thresh=1e-3)
+    
+    # Line search params
+    c1, beta, max_ls = 0.1, 0.8, 20
+    prev = Sigma.copy()
+    conv = {'objectives': [], 'grad_norms': [], 'step_norms': [], 'ls_iters': [], 'converged': False}
+    
+    # No progress tracking
+    no_progress_count = 0
+    no_progress_threshold = 50  # Stop if no progress for 50 iterations
+    
+    # Projection function for line search
+    def project_psd(Sig):
+        return project_to_PSD(Sig, thresh=1e-3)
+    
+    # Main loop
     for t in range(max_iters):
-        # 3. compute gradient ONLY on observed entries
-        gradient = np.zeros_like(Sigma)
-        # OLD unweighted version gradient[mask] = Sigma[mask] - S[mask]
-        gradient[mask] = weight_matrix[mask] * (Sigma[mask] - S[mask])
-        # double the diagonal elements of the gradient
-        gradient_diag = np.diag(np.diag(gradient))
-        gradient = gradient + gradient_diag
-
-        # DEBUG: Check for numerical issues
-        if np.any(np.isnan(gradient)) or np.any(np.isinf(gradient)):
-            print(f"  [PGD DEBUG] Iteration {t}: gradient has NaN or Inf!")
-            print(f"    weight_matrix[mask] range: [{np.min(weight_matrix[mask]):.2e}, {np.max(weight_matrix[mask]):.2e}]")
-            print(f"    Sigma[mask] range: [{np.min(Sigma[mask]):.2e}, {np.max(Sigma[mask]):.2e}]")
-            print(f"    S[mask] range: [{np.min(S[mask]):.2e}, {np.max(S[mask]):.2e}]")
-            print(f"    gradient[mask] range: [{np.min(gradient[mask]):.2e}, {np.max(gradient[mask]):.2e}]")
-            print(f"    gradient_diag range: [{np.min(np.diag(gradient_diag)):.2e}, {np.max(np.diag(gradient_diag)):.2e}]")
-            return prev_Sigma  # Return PREVIOUS valid state, not current corrupted Sigma
-
-        # 4. update and project to psd
-        Sigma_temp = Sigma - eta_adjusted * gradient
+        # Good initialization
+        g = grad(Sigma)
+        g_norm = np.linalg.norm(g)
+        obj_before = obj(Sigma)
         
-        if np.any(np.isnan(Sigma_temp)) or np.any(np.isinf(Sigma_temp)):
-            print(f"  [PGD DEBUG] Iteration {t}: Sigma_temp has NaN or Inf after gradient update!")
-            print(f"    eta_adjusted: {eta_adjusted:.2e}")
-            print(f"    gradient range: [{np.min(gradient):.2e}, {np.max(gradient):.2e}]")
-            return Sigma  # Return previous Sigma
+        # Use external line search function
+        Sig_new, step, ls = backtracking_line_search(
+            Sigma, g, obj, eta=eta, c1=c1, beta=beta, max_ls=max_ls,
+            project_fn=project_psd, debug_iter=t+1 if t < 3 else None
+        )
         
-        Sigma = project_to_PSD(Sigma_temp, thresh=1e-3)
+        obj_after = obj(Sig_new)
         
-        if np.any(np.isnan(Sigma)) or np.any(np.isinf(Sigma)):
-            print(f"  [PGD DEBUG] Iteration {t}: Sigma has NaN or Inf after PSD projection!")
-            print(f"    Sigma_temp range: [{np.min(Sigma_temp):.2e}, {np.max(Sigma_temp):.2e}]")
-            eigvals_temp = np.linalg.eigvalsh(Sigma_temp)
-            print(f"    Sigma_temp eigenvalues: [{np.min(eigvals_temp):.2e}, {np.max(eigvals_temp):.2e}]")
-            return prev_Sigma  # Return previous valid Sigma
-
-        if np.linalg.norm(Sigma - prev_Sigma, 'fro') < tol:
+        conv['objectives'].append(obj_after)
+        conv['grad_norms'].append(g_norm)
+        conv['step_norms'].append(np.linalg.norm(Sig_new - prev, 'fro'))
+        conv['ls_iters'].append(ls)
+        print(f"  [GOOD {t+1:3d}] obj={obj_after:.2e} grad={g_norm:.2e} Δ={conv['step_norms'][-1]:.2e} ls={ls}")
+        
+        # # COMMENTED OUT: Random control
+        # # Random control
+        # if not conv_rand['converged']:
+        #     g_rand = grad(Sigma_rand)
+        #     g_rand_norm = np.linalg.norm(g_rand)
+        #     Sig_rand_new, step_rand, ls_rand = line_search(Sigma_rand, g_rand, c1_val=0.01)
+        #     conv_rand['objectives'].append(obj(Sig_rand_new))
+        #     conv_rand['grad_norms'].append(g_rand_norm)
+        #     conv_rand['step_norms'].append(np.linalg.norm(Sig_rand_new - prev_rand, 'fro'))
+        #     conv_rand['ls_iters'].append(ls_rand)
+        #     print(f"  [RAND {t+1:3d}] obj={conv_rand['objectives'][-1]:.2e} grad={g_rand_norm:.2e} Δ={conv_rand['step_norms'][-1]:.2e} ls={ls_rand}")
+        #     
+        #     if not conv_rand['converged'] and g_rand_norm < 1e-10:
+        #         conv_rand['converged'] = True
+        #         print(f"  [RAND] Converged at iter {t+1} (grad={g_rand_norm:.2e})")
+        #     
+        #     prev_rand = Sig_rand_new
+        #     Sigma_rand = Sig_rand_new
+        
+        # Check for no progress (objective not changing)
+        if abs(obj_after - obj_before) < 1e-12:
+            no_progress_count += 1
+            if no_progress_count >= no_progress_threshold:
+                conv['converged'] = True
+                conv['termination_reason'] = f'no_progress_{no_progress_threshold}_iters'
+                print(f"  [GOOD] No progress for {no_progress_count} iterations (Δobj < 1e-12)")
+                break
+        else:
+            no_progress_count = 0
+        
+        # Check convergence based on gradient norm
+        if not conv['converged'] and g_norm < 1e-10:
+            conv['converged'] = True
+            conv['termination_reason'] = 'gradient_converged'
+            print(f"  [GOOD] Converged at iter {t+1} (grad={g_norm:.2e})")
             break
-        prev_Sigma = Sigma.copy()
+        
+        prev = Sig_new
+        Sigma = Sig_new
+    
+    conv['n_iters'] = t + 1
+    # conv_rand['n_iters'] = t + 1
+    
+    # Add timing info (just the good initialization now, random control commented out)
+    elapsed_time = time.time() - start_time
+    conv['time_seconds'] = elapsed_time
+    
+    # Add termination reason if not set
+    if 'termination_reason' not in conv:
+        conv['termination_reason'] = 'max_iters_reached'
+    
+    # Verify KKT conditions at final point
+    final_gradient = grad(Sigma)
+    is_optimum, kkt_dict = verify_pgd_optimum(Sigma, S_observed, mask, weight_matrix, final_gradient, tol=1e-6)
+    conv['kkt'] = {
+        'is_optimum': bool(is_optimum),
+        **{k: float(v) for k, v in kkt_dict.items()}
+    }
+    
+    # Print KKT condition status
+    if verbose:
+        print(f"KKT Conditions at final point:")
+        print(f"  Primal Feasibility (min_eig_W >= 0): {kkt_dict['min_eig_W']:.6e} (residual: {kkt_dict['primal_feasibility']:.6e})")
+        print(f"  Dual Feasibility (min_eig_grad >= 0): {kkt_dict['min_eig_grad']:.6e} (residual: {kkt_dict['dual_feasibility']:.6e})")
+        print(f"  Complementary Slackness (<grad, W> ≈ 0): {kkt_dict['complementary_slackness']:.6e}")
+        print(f"  Is Optimum: {is_optimum}")
+    
+    # Convert numpy arrays to lists for JSON serialization
+    for key in ['objectives', 'grad_norms', 'step_norms', 'ls_iters']:
+        if key in conv:
+            conv[key] = [float(x) for x in conv[key]]
+        # if key in conv_rand:
+        #     conv_rand[key] = [float(x) for x in conv_rand[key]]
+    
+    # # Add random control convergence info to main dict
+    # conv['random_control'] = conv_rand
 
-    return Sigma
+    print(conv)
+    
+    return Sigma, conv
 
-def pgd_maxent(Sigma_tilde, inds, noise_scales=None,max_iters=1000, eta=0.01, tol=1e-8, verbose=False):
+def pgd_maxent(Sigma_tilde, inds, noise_scales=None, max_iters=1000, eta=0.1, tol=1e-8, verbose=False):
     """
     Two-step PGD + Max Entropy pipeline.
 
@@ -309,10 +468,15 @@ def pgd_maxent(Sigma_tilde, inds, noise_scales=None,max_iters=1000, eta=0.01, to
         Sigma_true: Ground truth covariance matrix
         Sigma_tilde: Observed noisy covariance matrix
         inds: Array of observed indices [[i,j], ...]
+        noise_scales: Noise scale matrix for weighted optimization
         max_iters: Max iterations for PGD
         eta: Step size for PGD
         tol: Convergence tolerance for PGD
         verbose: Print progress
+        
+    Returns:
+        Sigma_opt: Optimized covariance matrix
+        full_convergence_info: Dictionary with convergence info from both stages
     """
     d = Sigma_tilde.shape[0]
 
@@ -331,40 +495,65 @@ def pgd_maxent(Sigma_tilde, inds, noise_scales=None,max_iters=1000, eta=0.01, to
         # Only compute weights for observed entries (avoid division by zero)
         raw_weights = 1.0 / (noise_scales[mask]**2)
         
-        # Apply weight exponent to reduce weight variation
-        # weight_exponent=1.0 → standard inverse-variance weighting
-        # weight_exponent=0.5 → sqrt of inverse-variance (less aggressive)
-        # weight_exponent=0.0 → uniform weights
-        weight_exponent = 0.3  # Compress weight variation (0.3 reduces 150x to ~4x)
-        weight_matrix[mask] = raw_weights ** weight_exponent
+        # Standard inverse-variance weighting (no compression)
+        weight_matrix[mask] = raw_weights
+        
+        # Normalize weights so maximum is 1 (prevents numerical issues)
+        max_weight = np.max(weight_matrix[mask])
+        if max_weight > 0:
+            weight_matrix[mask] = weight_matrix[mask] / max_weight
     else:
         weight_matrix = None
 
+    full_convergence_info = {}
+
     # Stage A: Projected Gradient Descent
     if verbose:
-        print("\nRunning Projected Gradient Descent...")
-    Sigma_psd = projected_gradient_descent(Sigma_obs, mask, weights=weight_matrix, eta=eta, max_iters=max_iters, tol=tol)
+        print("\n" + "="*60)
+        print("STAGE A: Projected Gradient Descent")
+        print("="*60)
+    
+    Sigma_psd, pgd_convergence = projected_gradient_descent(
+        Sigma_obs, mask, weights=weight_matrix, eta=eta, max_iters=max_iters, tol=tol, verbose=verbose
+    )
+    
+    full_convergence_info['pgd'] = pgd_convergence
+    
+    # Print PGD summary
+    if verbose:
+        print("\nPGD Summary:")
+        print(f"  Converged: {pgd_convergence['converged']}")
+        print(f"  Iterations: {pgd_convergence['n_iters']}")
+        print(f"  Termination: {pgd_convergence['termination_reason']}")
+        print(f"  Final objective: {pgd_convergence['objectives'][-1]:.6e}")
+        print(f"  Final grad norm: {pgd_convergence['grad_norms'][-1]:.6e}")
+        print(f"  Avg line search iters: {np.mean(pgd_convergence['ls_iters']):.2f}")
+        print(f"  Time: {pgd_convergence['time_seconds']:.2f} seconds")
     
     # DEBUG: Check PGD result
     if verbose:
-        print(f"PGD result - min: {np.min(Sigma_psd):.6f}, max: {np.max(Sigma_psd):.6f}")
+        print(f"\nPGD result check:")
+        print(f"  Value range: [{np.min(Sigma_psd):.6f}, {np.max(Sigma_psd):.6f}]")
         eigvals_pgd = np.linalg.eigvalsh(Sigma_psd)
-        print(f"PGD result - min eigval: {np.min(eigvals_pgd):.2e}, max eigval: {np.max(eigvals_pgd):.2e}")
-        print(f"PGD result - condition number: {np.max(eigvals_pgd)/np.min(eigvals_pgd) if np.min(eigvals_pgd) > 1e-10 else np.inf:.2e}")
+        print(f"  Eigenvalue range: [{np.min(eigvals_pgd):.2e}, {np.max(eigvals_pgd):.2e}]")
+        print(f"  Condition number: {np.max(eigvals_pgd)/np.min(eigvals_pgd) if np.min(eigvals_pgd) > 1e-10 else np.inf:.2e}")
     
     if np.any(np.isnan(Sigma_psd)) or np.any(np.isinf(Sigma_psd)):
         if verbose:
-            print(f"ERROR: PGD already returned NaN/inf!")
+            print(f"\nERROR: PGD returned NaN/inf!")
             print(f"  Input Sigma_obs - NaN: {np.any(np.isnan(Sigma_obs))}, Inf: {np.any(np.isinf(Sigma_obs))}")
-            print(f"  Weight matrix - NaN: {np.any(np.isnan(weight_matrix)) if weight_matrix is not None else 'None'}")
-            print(f"  Weight matrix - Inf: {np.any(np.isinf(weight_matrix)) if weight_matrix is not None else 'None'}")
             if weight_matrix is not None:
-                print(f"  Weight matrix - min: {np.min(weight_matrix[mask]):.2e}, max: {np.max(weight_matrix[mask]):.2e}")
-        return Sigma_psd
+                print(f"  Weight matrix range: [{np.min(weight_matrix[mask]):.2e}, {np.max(weight_matrix[mask]):.2e}]")
+        return Sigma_psd, full_convergence_info
 
     # Stage B: Max Entropy Optimization
     if verbose:
-        print("\nRunning Max Entropy Refinement...")
+        print("\n" + "="*60)
+        print("STAGE B: Max Entropy Refinement (L-BFGS)")
+        print("="*60)
+    
+    import time
+    lbfgs_start_time = time.time()
     
     try:
         # Direct method (using your existing optimization pipeline)
@@ -372,23 +561,81 @@ def pgd_maxent(Sigma_tilde, inds, noise_scales=None,max_iters=1000, eta=0.01, to
         Sigma_psd_vec = Sigma_psd[rows, cols]
         
         z_init = initialize_z(Sigma_psd, inds)
-        z_opt, g_vals, obj_vals = optimize_lbfgs(Sigma_psd_vec, z_init, inds, d, max_iters=1000, verbose=False)
+        z_opt, g_vals, obj_vals = optimize_lbfgs(Sigma_psd_vec, z_init, inds, d, max_iters=1000, verbose=verbose)
+        
+        lbfgs_elapsed = time.time() - lbfgs_start_time
+        
+        full_convergence_info['lbfgs'] = {
+            'grad_vals': g_vals,
+            'obj_vals': obj_vals,
+            'n_iters': len(obj_vals),
+            'converged': len(g_vals) > 0 and g_vals[-1] < 1e-8,
+            'time_seconds': lbfgs_elapsed
+        }
+        
+        if verbose:
+            print(f"\nL-BFGS Summary:")
+            print(f"  Iterations: {len(obj_vals)}")
+            print(f"  Final objective: {obj_vals[-1]:.6e}")
+            print(f"  Final grad sum: {g_vals[-1]:.6e}")
+            print(f"  Time: {lbfgs_elapsed:.2f} seconds")
         
         K_z_opt = get_K(z_opt, inds, d)
         
         Sigma_opt_before = np.linalg.inv(K_z_opt)
         Sigma_opt = project_to_PSD(Sigma_opt_before)  # Ensure PSD
+        
+        if verbose:
+            print(f"\nMax Entropy result check:")
+            eigvals_me = np.linalg.eigvalsh(Sigma_opt)
+            print(f"  Eigenvalue range: [{np.min(eigvals_me):.2e}, {np.max(eigvals_me):.2e}]")
+            print(f"  Condition number: {np.max(eigvals_me)/np.min(eigvals_me) if np.min(eigvals_me) > 1e-10 else np.inf:.2e}")
 
     except Exception as e:
         if verbose:
-            print(f"\nMax Entropy FAILED with exception: {str(e)}")
-            print(f"Returning PGD-only result from Sigma_psd")
-            print(f"Sigma_psd has NaN: {np.any(np.isnan(Sigma_psd))}, has Inf: {np.any(np.isinf(Sigma_psd))}")
-            print("Optimization failed: {str(e)}")
-            print("Falling back to PGD-only result")
-        return Sigma_psd  # Return PGD result instead of None
+            print(f"\nMax Entropy FAILED: {str(e)}")
+            print(f"Returning PGD-only result")
+        full_convergence_info['lbfgs'] = {'error': str(e)}
+        return Sigma_psd, full_convergence_info
 
-    return Sigma_opt
+    return Sigma_opt, full_convergence_info
+
+
+def verify_pgd_optimum(W, S_observed, mask, weights, gradient, tol=1e-6):
+    """
+    Verify KKT conditions for PGD optimum on the PSD cone.
+    """
+
+    # 1. Primal Feasibility: W must be in the PSD cone (W >= 0)
+    # We check the most negative eigenvalue.
+    eig_W = np.linalg.eigvalsh(W)
+    min_eig_W = np.min(eig_W)
+    primal_resid = max(0, -min_eig_W)
+    
+    # 2. Dual Feasibility: The gradient must be in the Dual Cone (gradient >= 0)
+    # In the case of the PSD cone, the dual cone is the PSD cone itself.
+    eig_G = np.linalg.eigvalsh(gradient)
+    min_eig_G = np.min(eig_G)
+    dual_resid = max(0, -min_eig_G)
+    
+    # 3. Complementary Slackness: <gradient, W> = 0
+    # Using the Frobenius Inner Product (trace(gradient.T @ W)) -> for sym matrices this is just np.sum(gradient * W)
+    comp_slackness = np.abs(np.sum(gradient * W))
+    
+    # Summary logic
+    is_optimum = (primal_resid < tol and 
+                  dual_resid < tol and 
+                  comp_slackness < tol)
+    
+    kkt_dict = {
+        "primal_feasibility": primal_resid,
+        "dual_feasibility": dual_resid,
+        "complementary_slackness": comp_slackness,
+        "min_eig_W": min_eig_W,
+        "min_eig_grad": min_eig_G
+    }
+    
+    return is_optimum, kkt_dict
 
 
 class IterativePrivateGGM:
@@ -580,7 +827,8 @@ class IterativePrivateGGM:
         """Get current covariance estimate using specified optimization method"""
         if self.optimizer == "pgd-maxent":
             inds = get_observed_Sigma_entries(self.Sigma_tilde)
-            return pgd_maxent(self.Sigma_tilde, inds, noise_scales=self.noise_scales, max_iters=1000, eta=0.1, tol=1e-8, verbose=False)
+            Sigma_hat, _ = pgd_maxent(self.Sigma_tilde, inds, noise_scales=self.noise_scales, max_iters=1000, eta=0.1, tol=1e-8, verbose=False)
+            return Sigma_hat
         
         elif self.optimizer == "lbfgs":
             # Convert measured_entries to array format expected by optimize_lbfgs
@@ -659,6 +907,7 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
         # Initialize storage for measurements and noise_scales
         self.measurements = {}
         self.noise_scales = {}
+        self.entry_to_rounds = {}  # Track which rounds each entry was measured in
         
         # ========================================
         # 1. Measure diagonal entries
@@ -677,10 +926,13 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
             self.noise_scales[(i,i)] = noise_scale
             self.measurements[(i,i)] = self.Sigma_tilde[i,i]
             self.measured_entries.add((i,i))  # Track diagonal measurements
+            self.entry_to_rounds[(i,i)] = [0]  # Round 0 for diagonal
         
         self.rho_used = rho_diag_init
         self.actual_diag_noise_scale = noise_scale
         print(f"%%%%% Diagonal noise scale: {noise_scale} (rho_used: {self.rho_used:.6f}) %%%%%")
+        print(f"  True diagonal: {np.diag(self.empirical_cov)}")
+        print(f"  Noisy diagonal: {np.diag(self.Sigma_tilde)}")
         
         # Get initial model estimate with just diagonals
         print("\nComputing initial model estimate with diagonal entries...")
@@ -791,6 +1043,7 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
                 self.measurements[(i,j)] = updated_measurement
                 self.noise_scales[(i,j)] = np.sqrt(updated_sigma2)
                 self.noise_scales[(j,i)] = np.sqrt(updated_sigma2)
+                self.entry_to_rounds[(i,j)].append(round_num)  # Track remeasurement
 
                 new_noise_scale = np.sqrt(updated_sigma2) # TO DO check if it needs to be the updated or raw one
 
@@ -803,6 +1056,7 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
                 self.noise_scales[(i,j)] = new_noise_scale
                 self.noise_scales[(j,i)] = new_noise_scale
                 self.measured_entries.add((i,j))
+                self.entry_to_rounds[(i,j)] = [round_num]  # Track first measurement
                 
                 print(f"First measurement ({i},{j}): empirical={empirical_cov_ij:.6f}, " +
                       f"noisy={noisy_cov:.6f}, noise_std={new_noise_scale:.6f}")
@@ -819,6 +1073,19 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
                 # Don't update Sigma_hat_old, don't trigger annealing
                 # Continue to next round
                 continue
+            
+            # ========================================
+            # Print KKT conditions from convergence history
+            # ========================================
+            if hasattr(self, 'convergence_history') and len(self.convergence_history) > 0:
+                conv_info = self.convergence_history[-1]
+                if 'pgd' in conv_info and 'kkt' in conv_info['pgd']:
+                    kkt = conv_info['pgd']['kkt']
+                    print(f"KKT CONDITIONS (Round {round_num}):")
+                    print(f"  Optimum satisfied: {kkt['is_optimum']}")
+                    print(f"  Primal feasibility: {kkt['primal_feasibility']:.2e} (min_eig={kkt['min_eig_W']:.2e})")
+                    print(f"  Dual feasibility: {kkt['dual_feasibility']:.2e} (min_eig_grad={kkt['min_eig_grad']:.2e})")
+                    print(f"  Complementary slackness: {kkt['complementary_slackness']:.2e}")
             
             old_estimate = Sigma_hat_old[i,j]
             new_estimate = Sigma_hat_new[i,j]
@@ -863,8 +1130,13 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
         
         if self.optimizer == "pgd-maxent":
             inds = get_observed_Sigma_entries(self.Sigma_tilde)
-            Sigma_hat = pgd_maxent(self.Sigma_tilde, inds, noise_scales=noise_scales_array, 
+            Sigma_hat, convergence_info = pgd_maxent(self.Sigma_tilde, inds, noise_scales=noise_scales_array, 
                             max_iters=1000, eta=0.1, tol=1e-8, verbose=False)
+            
+            # Store convergence info for this round
+            if not hasattr(self, 'convergence_history'):
+                self.convergence_history = []
+            self.convergence_history.append(convergence_info)
             
             # TODO: double check with Dan
             # Check if pgd_maxent returned NaN/inf
