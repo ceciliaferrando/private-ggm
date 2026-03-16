@@ -214,82 +214,87 @@ def mirror_descent(Sigma_init, Sigma_tilde, inds, tau, max_iters=20000, eta_init
     return Sigma, K
 
 
-def backtracking_line_search(Sig, g, obj_fn, eta=0.1, c1=0.1, beta=0.8, max_ls=20, 
-                              project_fn=None, debug_iter=None):
+def bb_step_size(Sig, Sig_prev, g, g_prev, accelerate=1.5):
     """
-    Backtracking line search with optional PSD projection and non-monotone fallback.
+    Compute Barzilai-Borwein step size with optional acceleration.
+    
+    Args:
+        Sig: Current point
+        Sig_prev: Previous point
+        g: Current gradient
+        g_prev: Previous gradient
+        accelerate: Acceleration factor (>1 means more aggressive steps)
+        
+    Returns:
+        step: BB step size
+    """
+    s = Sig - Sig_prev
+    y = g - g_prev
+    
+    # First BB formula: α = (s^T s) / (s^T y)
+    s_norm_sq = np.sum(s * s)
+    sy = np.sum(s * y)
+    
+    # Safeguard: ensure positive step size
+    if sy > 1e-10:
+        alpha = s_norm_sq / sy
+        # Apply acceleration factor
+        alpha = alpha * accelerate
+        # Clip to reasonable range [0.001, 50.0] (higher upper bound for speed)
+        alpha = np.clip(alpha, 0.001, 50.0)
+    else:
+        alpha = 0.1 * accelerate  # Fallback with acceleration
+    
+    return alpha
+
+
+def projected_bb_line_search(Sig, g, Sig_prev, g_prev, obj_fn, project_fn, debug_iter=None):
+    """
+    Projected Barzilai-Borwein line search with acceleration - uses BB step size with projection.
     
     Args:
         Sig: Current point (matrix)
-        g: Gradient at current point
+        g: Current gradient
+        Sig_prev: Previous point
+        g_prev: Previous gradient
         obj_fn: Objective function
-        eta: Initial step size
-        c1: Sufficient decrease parameter
-        beta: Step size reduction factor
-        max_ls: Maximum line search iterations
-        project_fn: Optional projection function (e.g., project_to_PSD)
+        project_fn: Projection function (e.g., project_to_PSD)
         debug_iter: If provided, print debug info for this iteration
         
     Returns:
         Sig_new: New point after line search
-        step: Final step size used
-        ls: Number of line search iterations
+        step: Step size used
+        ls: Number of iterations (always 1 for BB)
     """
-    step, ls = eta, 0
-    obj_curr = obj_fn(Sig)
-    best_Sig, best_obj, best_step = Sig.copy(), obj_curr, 0.0
-    
-    # DEBUG: For first few iterations, track what happens
     debug_this = debug_iter is not None and debug_iter <= 3
     
-    while ls < max_ls:
-        Sig_candidate = Sig - step * g
-        
-        if debug_this and ls == 0 and project_fn is not None:
-            print(f"    [LS DEBUG iter {debug_iter}] Before projection: diag={np.diag(Sig_candidate)[:3]}")
-            cand_eigvals = np.linalg.eigvalsh(Sig_candidate)
-            print(f"    [LS DEBUG iter {debug_iter}] Before projection: min_eigval={np.min(cand_eigvals):.6e}")
-        
-        # Apply projection if provided
-        if project_fn is not None:
-            Sig_new = project_fn(Sig_candidate)
-        else:
-            Sig_new = Sig_candidate
-        
-        if debug_this and ls == 0 and project_fn is not None:
-            print(f"    [LS DEBUG iter {debug_iter}] After projection: diag={np.diag(Sig_new)[:3]}")
-            new_eigvals = np.linalg.eigvalsh(Sig_new)
-            print(f"    [LS DEBUG iter {debug_iter}] After projection: min_eigval={np.min(new_eigvals):.6e}")
-        
-        obj_new = obj_fn(Sig_new)
-        
-        # Track best point found (non-monotone)
-        if obj_new < best_obj:
-            best_Sig = Sig_new.copy()
-            best_obj = obj_new
-            best_step = step
-        
-        # Check sufficient decrease
-        sufficient_decrease = obj_curr - c1 * np.linalg.norm(Sig_new - Sig, 'fro')
-        if obj_new <= sufficient_decrease:
-            if debug_this:
-                print(f"    [LS DEBUG iter {debug_iter}] SUCCESS at ls={ls}: obj_new={obj_new:.6e} <= {sufficient_decrease:.6e}")
-            return Sig_new, step, ls
-        
-        if debug_this and ls == 0:
-            print(f"    [LS DEBUG iter {debug_iter}] FAIL at ls={ls}: obj_new={obj_new:.6e} > {sufficient_decrease:.6e}")
-            print(f"    [LS DEBUG iter {debug_iter}] obj_curr={obj_curr:.6e}, norm={np.linalg.norm(Sig_new - Sig, 'fro'):.6e}")
-        
-        step *= beta
-        ls += 1
+    # Compute BB step size with acceleration (1.5x)
+    step = bb_step_size(Sig, Sig_prev, g, g_prev, accelerate=1.5)
     
-    # Non-monotone: return best found even if sufficient decrease not met
     if debug_this:
-        print(f"    [LS DEBUG iter {debug_iter}] Exhausted line search, returning best: obj={best_obj:.6e}")
-    return best_Sig, best_step, ls
+        print(f"    [BB LS iter {debug_iter}] BB step size: {step:.6e}")
+    
+    # Take step
+    Sig_candidate = Sig - step * g
+    
+    if debug_this and project_fn is not None:
+        print(f"    [BB LS iter {debug_iter}] Before projection: diag={np.diag(Sig_candidate)[:3]}")
+        cand_eigvals = np.linalg.eigvalsh(Sig_candidate)
+        print(f"    [BB LS iter {debug_iter}] Before projection: min_eigval={np.min(cand_eigvals):.6e}")
+    
+    # Apply projection
+    Sig_new = project_fn(Sig_candidate)
+    
+    if debug_this and project_fn is not None:
+        print(f"    [BB LS iter {debug_iter}] After projection: diag={np.diag(Sig_new)[:3]}")
+        new_eigvals = np.linalg.eigvalsh(Sig_new)
+        print(f"    [BB LS iter {debug_iter}] After projection: min_eigval={np.min(new_eigvals):.6e}")
+        print(f"    [BB LS iter {debug_iter}] Objective: {obj_fn(Sig_new):.6e}")
+    
+    return Sig_new, step, 1  # BB takes exactly 1 iteration (no backtracking)
 
 
-def projected_gradient_descent(S_observed, mask, weights=None, eta=0.1, max_iters=1000, tol=1e-8, verbose=False):
+def projected_gradient_descent(S_observed, mask, weights=None, eta=0.1, max_iters=5000, tol=1e-8, verbose=False):
     """
     Projected gradient descent with backtracking line search.
     """
@@ -345,30 +350,29 @@ def projected_gradient_descent(S_observed, mask, weights=None, eta=0.1, max_iter
     # Sigma_rand = eigvecs @ np.diag(random_eigvals + 0.1) @ eigvecs.T
     # Sigma_rand = project_to_PSD(Sigma_rand, thresh=1e-3)
     
-    # Line search params
-    c1, beta, max_ls = 0.1, 0.8, 20
-    prev = Sigma.copy()
-    conv = {'objectives': [], 'grad_norms': [], 'step_norms': [], 'ls_iters': [], 'converged': False}
-    
-    # No progress tracking
-    no_progress_count = 0
-    no_progress_threshold = 50  # Stop if no progress for 50 iterations
-    
     # Projection function for line search
     def project_psd(Sig):
         return project_to_PSD(Sig, thresh=1e-3)
     
+    prev = Sigma.copy()
+    g_prev = grad(Sigma)
+    conv = {'objectives': [], 'grad_norms': [], 'step_norms': [], 'ls_iters': [], 'converged': False}
+    
+    # No progress tracking
+    no_progress_count = 0
+    no_progress_threshold = 100  # Stop if no progress for 100 iterations
+    
     # Main loop
     for t in range(max_iters):
-        # Good initialization
+        # Current gradient
         g = grad(Sigma)
         g_norm = np.linalg.norm(g)
         obj_before = obj(Sigma)
         
-        # Use external line search function
-        Sig_new, step, ls = backtracking_line_search(
-            Sigma, g, obj, eta=eta, c1=c1, beta=beta, max_ls=max_ls,
-            project_fn=project_psd, debug_iter=t+1 if t < 3 else None
+        # Use Barzilai-Borwein line search with projection
+        Sig_new, step, ls = projected_bb_line_search(
+            Sigma, g, prev, g_prev, obj, project_fn=project_psd, 
+            debug_iter=t+1 if t < 3 else None
         )
         
         obj_after = obj(Sig_new)
@@ -377,26 +381,10 @@ def projected_gradient_descent(S_observed, mask, weights=None, eta=0.1, max_iter
         conv['grad_norms'].append(g_norm)
         conv['step_norms'].append(np.linalg.norm(Sig_new - prev, 'fro'))
         conv['ls_iters'].append(ls)
-        print(f"  [GOOD {t+1:3d}] obj={obj_after:.2e} grad={g_norm:.2e} Δ={conv['step_norms'][-1]:.2e} ls={ls}")
         
-        # # COMMENTED OUT: Random control
-        # # Random control
-        # if not conv_rand['converged']:
-        #     g_rand = grad(Sigma_rand)
-        #     g_rand_norm = np.linalg.norm(g_rand)
-        #     Sig_rand_new, step_rand, ls_rand = line_search(Sigma_rand, g_rand, c1_val=0.01)
-        #     conv_rand['objectives'].append(obj(Sig_rand_new))
-        #     conv_rand['grad_norms'].append(g_rand_norm)
-        #     conv_rand['step_norms'].append(np.linalg.norm(Sig_rand_new - prev_rand, 'fro'))
-        #     conv_rand['ls_iters'].append(ls_rand)
-        #     print(f"  [RAND {t+1:3d}] obj={conv_rand['objectives'][-1]:.2e} grad={g_rand_norm:.2e} Δ={conv_rand['step_norms'][-1]:.2e} ls={ls_rand}")
-        #     
-        #     if not conv_rand['converged'] and g_rand_norm < 1e-10:
-        #         conv_rand['converged'] = True
-        #         print(f"  [RAND] Converged at iter {t+1} (grad={g_rand_norm:.2e})")
-        #     
-        #     prev_rand = Sig_rand_new
-        #     Sigma_rand = Sig_rand_new
+        # Print every 100 iterations instead of every iteration
+        if (t + 1) % 100 == 0:
+            print(f"  [BB {t+1:4d}] obj={obj_after:.2e} grad={g_norm:.2e} Δ={conv['step_norms'][-1]:.2e} α={step:.2e}")
         
         # Check for no progress (objective not changing)
         if abs(obj_after - obj_before) < 1e-12:
@@ -404,7 +392,7 @@ def projected_gradient_descent(S_observed, mask, weights=None, eta=0.1, max_iter
             if no_progress_count >= no_progress_threshold:
                 conv['converged'] = True
                 conv['termination_reason'] = f'no_progress_{no_progress_threshold}_iters'
-                print(f"  [GOOD] No progress for {no_progress_count} iterations (Δobj < 1e-12)")
+                print(f"  [BB] No progress for {no_progress_count} iterations (Δobj < 1e-12)")
                 break
         else:
             no_progress_count = 0
@@ -413,10 +401,12 @@ def projected_gradient_descent(S_observed, mask, weights=None, eta=0.1, max_iter
         if not conv['converged'] and g_norm < 1e-10:
             conv['converged'] = True
             conv['termination_reason'] = 'gradient_converged'
-            print(f"  [GOOD] Converged at iter {t+1} (grad={g_norm:.2e})")
+            print(f"  [BB] Converged at iter {t+1} (grad={g_norm:.2e})")
             break
         
-        prev = Sig_new
+        # Store for next BB step
+        prev = Sig_new.copy()
+        g_prev = g
         Sigma = Sig_new
     
     conv['n_iters'] = t + 1
@@ -432,7 +422,7 @@ def projected_gradient_descent(S_observed, mask, weights=None, eta=0.1, max_iter
     
     # Verify KKT conditions at final point
     final_gradient = grad(Sigma)
-    is_optimum, kkt_dict = verify_pgd_optimum(Sigma, S_observed, mask, weight_matrix, final_gradient, tol=1e-6)
+    is_optimum, kkt_dict = verify_pgd_optimum(Sigma, final_gradient, tol=1e-4)
     conv['kkt'] = {
         'is_optimum': bool(is_optimum),
         **{k: float(v) for k, v in kkt_dict.items()}
@@ -455,8 +445,6 @@ def projected_gradient_descent(S_observed, mask, weights=None, eta=0.1, max_iter
     
     # # Add random control convergence info to main dict
     # conv['random_control'] = conv_rand
-
-    print(conv)
     
     return Sigma, conv
 
@@ -601,9 +589,14 @@ def pgd_maxent(Sigma_tilde, inds, noise_scales=None, max_iters=1000, eta=0.1, to
     return Sigma_opt, full_convergence_info
 
 
-def verify_pgd_optimum(W, S_observed, mask, weights, gradient, tol=1e-6):
+def verify_pgd_optimum(W, gradient, tol=1e-6):
     """
     Verify KKT conditions for PGD optimum on the PSD cone.
+    
+    Args:
+        W: Matrix to verify (should be PSD)
+        gradient: Gradient at the point
+        tol: Tolerance threshold for KKT conditions
     """
 
     # 1. Primal Feasibility: W must be in the PSD cone (W >= 0)

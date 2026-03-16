@@ -234,12 +234,8 @@ def run_experiment(
                 
                 Sigma_est = model.fit(X)
                 
-                # Save convergence information if available
+                # Save convergence information for trial 0 only (in same folder as main results)
                 if trial == 0 and hasattr(model, 'convergence_history') and model.convergence_history:
-                    import pickle
-                    conv_dir = os.path.join(output_dir, 'convergence')
-                    os.makedirs(conv_dir, exist_ok=True)
-                    
                     dataset_label = data_name if data_type == 'real' else f'synthetic_d{d}'
                     
                     # Convert JAX arrays to regular Python lists for JSON serialization
@@ -267,29 +263,10 @@ def run_experiment(
                         'convergence_history': convert_to_serializable(model.convergence_history)
                     }
                     
-                    # Save as JSON
-                    json_path = os.path.join(conv_dir, f'convergence_{dataset_label}_rho{rho}.json')
+                    # Save as JSON in same folder as main results
+                    json_path = os.path.join(output_dir, f'convergence_{dataset_label}_rho{rho}.json')
                     with open(json_path, 'w') as f:
                         json.dump(conv_data, f, indent=2)
-                    print(f"  Saved convergence data to {json_path}")
-                    
-                    # Save as pickle (with original data)
-                    pkl_data = {
-                        'settings': {
-                            'dataset': dataset_label,
-                            'd': d,
-                            'n': X.shape[0],
-                            'rho': rho,
-                            'alpha': alpha,
-                            'beta': 0.1,
-                            'max_rounds': max_rounds
-                        },
-                        'convergence_history': model.convergence_history
-                    }
-                    pkl_path = os.path.join(conv_dir, f'convergence_{dataset_label}_rho{rho}.pkl')
-                    with open(pkl_path, 'wb') as f:
-                        pickle.dump(pkl_data, f)
-                    print(f"  Saved convergence data to {pkl_path}")
                 
                 # Compute errors for annealing method
                 mah_error = mahalanobis_cov_error(Sigma_true, Sigma_est)
@@ -300,6 +277,28 @@ def run_experiment(
                 mah_error_ssp = mahalanobis_cov_error(Sigma_true, Sigma_SSP)
                 frob_error_ssp = frobenius_error(Sigma_true, Sigma_SSP)
                 
+                # Convert entry_to_rounds to JSON-serializable format (dict keys must be strings)
+                entry_to_rounds_serialized = {}
+                if hasattr(model, 'entry_to_rounds'):
+                    for (i, j), rounds_list in model.entry_to_rounds.items():
+                        key = f"({i},{j})"  # Convert tuple key to string
+                        entry_to_rounds_serialized[key] = rounds_list
+                
+                # Extract KKT conditions from convergence history
+                kkt_summary = {}
+                if hasattr(model, 'convergence_history') and model.convergence_history:
+                    for round_idx, conv_info in enumerate(model.convergence_history):
+                        if 'pgd' in conv_info and 'kkt' in conv_info['pgd']:
+                            kkt = conv_info['pgd']['kkt']
+                            kkt_summary[f'round_{round_idx}'] = {
+                                'is_optimum': bool(kkt['is_optimum']),
+                                'primal_feasibility': float(kkt['primal_feasibility']),
+                                'dual_feasibility': float(kkt['dual_feasibility']),
+                                'complementary_slackness': float(kkt['complementary_slackness']),
+                                'min_eig_W': float(kkt['min_eig_W']),
+                                'min_eig_grad': float(kkt['min_eig_grad'])
+                            }
+                
                 # Store results
                 trial_results = {
                     'annealing': {
@@ -307,7 +306,11 @@ def run_experiment(
                         'frobenius_error': float(frob_error),
                         'estimated_cov': Sigma_est.tolist(),
                         'n_rounds': len(model.measurements),
-                        'total_measurements': len(model.measurements)
+                        'total_measurements': len(model.measurements),
+                        'measurements': {f"({i},{j})": float(v) for (i, j), v in model.measurements.items()},
+                        'noise_scales': {f"({i},{j})": float(v) for (i, j), v in model.noise_scales.items()},
+                        'entry_to_rounds': entry_to_rounds_serialized,
+                        'kkt_conditions': kkt_summary
                     },
                     'ssp': {
                         'mahalanobis_error': float(mah_error_ssp),
@@ -325,6 +328,34 @@ def run_experiment(
                 print(f"  SSP:       Mah={mah_error_ssp:.4f}, Frob={frob_error_ssp:.4f}")
                 print(f"  Total measurements: {len(model.measurements)}")
                 print(f"  SSP noise scale: {ssp_noise_scale:.6e}")
+                
+                # Print KKT conditions for first and last round
+                if hasattr(model, 'convergence_history') and model.convergence_history:
+                    print(f"\n  KKT Conditions Summary:")
+                    
+                    # First round
+                    first_round = model.convergence_history[0]
+                    if 'pgd' in first_round and 'kkt' in first_round['pgd']:
+                        kkt = first_round['pgd']['kkt']
+                        print(f"    Round 0 (first):")
+                        print(f"      is_optimum={kkt['is_optimum']}, primal_feas={kkt['primal_feasibility']:.2e}, dual_feas={kkt['dual_feasibility']:.2e}")
+                        print(f"      comp_slack={kkt['complementary_slackness']:.2e}, min_eig_W={kkt['min_eig_W']:.2e}, min_eig_grad={kkt['min_eig_grad']:.2e}")
+                    
+                    # Last round
+                    last_round = model.convergence_history[-1]
+                    if 'pgd' in last_round and 'kkt' in last_round['pgd']:
+                        kkt = last_round['pgd']['kkt']
+                        print(f"    Round {len(model.convergence_history)-1} (last):")
+                        print(f"      is_optimum={kkt['is_optimum']}, primal_feas={kkt['primal_feasibility']:.2e}, dual_feas={kkt['dual_feasibility']:.2e}")
+                        print(f"      comp_slack={kkt['complementary_slackness']:.2e}, min_eig_W={kkt['min_eig_W']:.2e}, min_eig_grad={kkt['min_eig_grad']:.2e}")
+                
+                # Print measurement details
+                if hasattr(model, 'entry_to_rounds'):
+                    print(f"\n  Measurement tracking (entry_to_rounds):")
+                    for (i, j), rounds in sorted(model.entry_to_rounds.items()):
+                        meas_val = model.measurements.get((i, j), np.nan)
+                        noise_std = model.noise_scales.get((i, j), np.nan)
+                        print(f"    ({i},{j}): rounds={rounds}, value={meas_val:.6f}, noise_std={noise_std:.6e}")
                 
                 # SAVE AFTER EACH TRIAL
                 save_results(results, output_file)
