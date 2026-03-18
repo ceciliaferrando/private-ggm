@@ -7,6 +7,7 @@ import jax.numpy as jnp
 import jax.random as jrandom
 import optax
 from functools import partial
+from collections import deque
 
 from privateggm.utils import *
 from privateggm.privacy import gaussian_mechanism, exponential_mechanism, cov_jk_sensitivity_l2, cov_jk_sensitivity_linf
@@ -36,7 +37,7 @@ def loss_fn(z, inds, Sigma_tilde_vec, d, weights=None):
 
     return total_loss
 
-def optimize_lbfgs(Sigma_tilde_vec, z, inds, d, max_iters=100, verbose=False):
+def optimize_lbfgs(Sigma_tilde_vec, z, inds, d, max_iters=500, verbose=False):
     """
     Sigma_tilde_vec [np.array]: matrix of observed (privatized) covariance entries
     z [jnp.array]: vector supporting K(z)
@@ -293,6 +294,100 @@ def projected_bb_line_search(Sig, g, Sig_prev, g_prev, obj_fn, project_fn, debug
     
     return Sig_new, step, 1  # BB takes exactly 1 iteration (no backtracking)
 
+def projected_line_search(Sig, g, obj_fn, project_fn, prev_step=None, max_bt=20):
+    """
+    Backtracking line search with projection.
+    Uses 1.1 * prev_step as initial guess if available.
+    
+    Args:
+        Sig: Current point (matrix)
+        g: Current gradient
+        obj_fn: Objective function
+        project_fn: Projection function (e.g., project_to_PSD)
+        prev_step: Step size from previous iteration (for warm start)
+        max_bt: Maximum backtracking iterations
+        
+    Returns:
+        Sig_new: New point after line search
+        step: Step size used
+        ls: Number of line search iterations
+    """
+    # 1. SET THE INITIAL STEP FOR THIS ITERATION
+    if prev_step is None or prev_step < 1e-10:
+        # If no history, or if the step has decayed into nothingness,
+        # we must reset to a reasonable starting value 
+        step = 0.1 
+    else:
+        # Start at 1.1x of the last successful step (warm start)
+        step = prev_step * 1.1
+    
+    obj_current = obj_fn(Sig)
+    
+    # 2. BACKTRACKING LOOP
+    for bt_iter in range(max_bt):
+        # Apply step and project 
+        Sig_candidate = Sig - step * g
+        Sig_new = project_fn(Sig_candidate)
+        obj_new = obj_fn(Sig_new)
+        
+        # 3. SUCCESS CONDITION: Armijo condition
+        predicted_decrease = -np.sum(g * (Sig_new - Sig))
+        if obj_new <= obj_current - 0.5 * predicted_decrease:
+            # Progress: return this step so the NEXT call
+            # can use 1.1 * this_step as its starting point.
+            return Sig_new, step, bt_iter + 1
+        
+        # 4. FAIL CONDITION: Shrink step size
+        step *= 0.5
+    
+    # If we exhaust max_bt without progress, return best attempt
+    # This happens when gradient is very small or we're already at optimum
+    Sig_candidate = Sig - step * g
+    Sig_new = project_fn(Sig_candidate)
+    return Sig_new, step, max_bt
+
+def gold_standard_line_search(Sig, g, Sig_prev, g_prev, obj_fn, project_fn, history_objs, max_bt=20):
+    """
+    Improved Projected Line Search: BB-initialization + Non-monotone Backtracking.
+    
+    Args:
+        history_objs: A deque(maxlen=5) containing recent objective values.
+    """
+    # 1. DYNAMIC INITIALIZATION (The "Smart" 1.1x)
+    # Instead of 1.1, we use the BB formula to sense the local curvature
+    s = Sig - Sig_prev
+    y = g - g_prev
+    sy = np.sum(s * y)
+    
+    if sy > 1e-10:
+        step = np.sum(s * s) / sy  # BB Step
+    else:
+        step = 0.5 # Fallback if geometry is flat
+    
+    # Safety clip to prevent extreme jumps
+    step = np.clip(step, 1e-4, 50.0)
+    
+    # 2. NON-MONOTONE REFERENCE
+    # Simple LS fails because it's too strict (obj_new < obj_current).
+    # We compare to the MAX of the last 5 iterations to allow "breathing room."
+    f_max = np.max(history_objs) if len(history_objs) > 0 else obj_fn(Sig)
+    
+    # 3. THE PROJECTED BACKTRACKING LOOP
+    for bt_iter in range(max_bt):
+        # Step + Projection (Crucial: Project inside the loop!)
+        Sig_candidate = project_fn(Sig - step * g)
+        obj_candidate = obj_fn(Sig_candidate)
+        
+        # Check against the "High Water Mark" (f_max)
+        if obj_candidate <= f_max:
+            return Sig_candidate, step, obj_candidate, bt_iter + 1
+        
+        # Shrink if we didn't beat the high water mark
+        step *= 0.5
+        
+    # Final fallback: return the last attempt
+    return Sig_candidate, step, obj_candidate, max_bt
+
 
 def projected_gradient_descent(S_observed, mask, weights=None, eta=0.1, max_iters=5000, tol=1e-8, verbose=False):
     """
@@ -362,6 +457,10 @@ def projected_gradient_descent(S_observed, mask, weights=None, eta=0.1, max_iter
     no_progress_count = 0
     no_progress_threshold = 100  # Stop if no progress for 100 iterations
     
+    # Initialize history for non-monotone line search (gold standard)
+    history_objs = deque(maxlen=5)
+    history_objs.append(obj(Sigma))
+    
     # Main loop
     for t in range(max_iters):
         # Current gradient
@@ -369,13 +468,14 @@ def projected_gradient_descent(S_observed, mask, weights=None, eta=0.1, max_iter
         g_norm = np.linalg.norm(g)
         obj_before = obj(Sigma)
         
-        # Use Barzilai-Borwein line search with projection
-        Sig_new, step, ls = projected_bb_line_search(
+        # Use gold standard line search (BB initialization + non-monotone backtracking)
+        Sig_new, step, obj_candidate, ls = gold_standard_line_search(
             Sigma, g, prev, g_prev, obj, project_fn=project_psd, 
-            debug_iter=t+1 if t < 3 else None
+            history_objs=history_objs, max_bt=20
         )
         
         obj_after = obj(Sig_new)
+        history_objs.append(obj_after)
         
         conv['objectives'].append(obj_after)
         conv['grad_norms'].append(g_norm)
@@ -384,7 +484,7 @@ def projected_gradient_descent(S_observed, mask, weights=None, eta=0.1, max_iter
         
         # Print every 100 iterations instead of every iteration
         if (t + 1) % 100 == 0:
-            print(f"  [BB {t+1:4d}] obj={obj_after:.2e} grad={g_norm:.2e} Δ={conv['step_norms'][-1]:.2e} α={step:.2e}")
+            print(f"  [LS {t+1:4d}] obj={obj_after:.2e} grad={g_norm:.2e} Δ={conv['step_norms'][-1]:.2e} α={step:.2e}")
         
         # Check for no progress (objective not changing)
         if abs(obj_after - obj_before) < 1e-12:
@@ -392,7 +492,7 @@ def projected_gradient_descent(S_observed, mask, weights=None, eta=0.1, max_iter
             if no_progress_count >= no_progress_threshold:
                 conv['converged'] = True
                 conv['termination_reason'] = f'no_progress_{no_progress_threshold}_iters'
-                print(f"  [BB] No progress for {no_progress_count} iterations (Δobj < 1e-12)")
+                print(f"  [LS] No progress for {no_progress_count} iterations (Δobj < 1e-12)")
                 break
         else:
             no_progress_count = 0
@@ -401,12 +501,12 @@ def projected_gradient_descent(S_observed, mask, weights=None, eta=0.1, max_iter
         if not conv['converged'] and g_norm < 1e-10:
             conv['converged'] = True
             conv['termination_reason'] = 'gradient_converged'
-            print(f"  [BB] Converged at iter {t+1} (grad={g_norm:.2e})")
+            print(f"  [LS] Converged at iter {t+1} (grad={g_norm:.2e})")
             break
         
-        # Store for next BB step
-        prev = Sig_new.copy()
-        g_prev = g
+        # Update for next iteration
+        prev = Sigma.copy()
+        g_prev = g.copy()
         Sigma = Sig_new
     
     conv['n_iters'] = t + 1
