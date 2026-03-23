@@ -566,9 +566,6 @@ def pgd_maxent(Sigma_tilde, inds, noise_scales=None, max_iters=1000, eta=0.1, to
         Sigma_opt: Optimized covariance matrix
         full_convergence_info: Dictionary with convergence info from both stages
     """
-    import time
-    pgd_maxent_start_time = time.time()
-    
     d = Sigma_tilde.shape[0]
 
     # After (correct 2D mask)
@@ -687,12 +684,8 @@ def pgd_maxent(Sigma_tilde, inds, noise_scales=None, max_iters=1000, eta=0.1, to
             print(f"\nMax Entropy FAILED: {str(e)}")
             print(f"Returning PGD-only result")
         full_convergence_info['lbfgs'] = {'error': str(e)}
-        pgd_maxent_elapsed = time.time() - pgd_maxent_start_time
-        full_convergence_info['total_time_seconds'] = pgd_maxent_elapsed
         return Sigma_psd, full_convergence_info
 
-    pgd_maxent_elapsed = time.time() - pgd_maxent_start_time
-    full_convergence_info['total_time_seconds'] = pgd_maxent_elapsed
     return Sigma_opt, full_convergence_info
 
 
@@ -1038,6 +1031,7 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
         print("\nComputing initial model estimate with diagonal entries...")
         Sigma_hat_init = self.get_current_estimate()
         self.Sigma_hat = Sigma_hat_init  # Store initial estimate
+        self.Sigma_baseline = Sigma_hat_init.copy()  # Save baseline (diagonal-only estimate)
         print(f"Initial estimate computed (condition number: {np.linalg.cond(Sigma_hat_init):.2e})")
         
         # ========================================
