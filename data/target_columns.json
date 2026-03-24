@@ -3,5 +3,9 @@
   "SeoulBikeData": "Rented Bike Count",
   "BreastCancerWisconsin": "Diagnosis",
   "LifeExpectancy": null,
-  "communities_crime": "ViolentCrimesPerPop"
+  "communities_crime": "ViolentCrimesPerPop",
+  "bankruptcy": null,
+  "Ailerons": null,
+  "spambase": null,
+  "mice": null
 }

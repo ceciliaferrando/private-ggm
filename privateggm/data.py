@@ -4,6 +4,14 @@ import os
 import json
 from sklearn.preprocessing import MinMaxScaler
 
+def _is_numeric_string(s):
+    """Check if a string represents a number (int or float)"""
+    try:
+        float(s)
+        return True
+    except (ValueError, TypeError):
+        return False
+
 def load_data(data_dir, data_name="housing", target_column=None, drop_columns=None):
     """
     Load a dataset from a CSV file, optionally excluding a target variable and other columns.
@@ -28,10 +36,26 @@ def load_data(data_dir, data_name="housing", target_column=None, drop_columns=No
     if not os.path.exists(data_path):
         raise FileNotFoundError(f"{data_name} dataset not found at {data_path}")
     
+    # Auto-detect if CSV has a header by checking if first row is numeric
+    header = 'infer'  # Default behavior
+    with open(data_path, 'r') as f:
+        first_line = f.readline().strip()
+        # Try to parse first line as floats - if all numeric, likely data not header
+        try:
+            values = first_line.split(',')
+            all_numeric = all(
+                _is_numeric_string(v.strip()) for v in values if v.strip()
+            )
+            if all_numeric:
+                print(f"Detected headerless CSV for {data_name}, loading with header=None")
+                header = None
+        except:
+            pass
+    
     # Try different encodings
     for encoding in ['utf-8', 'latin-1', 'iso-8859-1', 'cp1252']:
         try:
-            df = pd.read_csv(data_path, encoding=encoding)
+            df = pd.read_csv(data_path, encoding=encoding, header=header)
             if encoding != 'utf-8':
                 print(f"Successfully loaded {data_name} with encoding: {encoding}")
             break
@@ -87,6 +111,12 @@ def load_data(data_dir, data_name="housing", target_column=None, drop_columns=No
     rows_after = len(df)
     if rows_before > rows_after:
         print(f"Dropped {rows_before - rows_after} rows with missing values ({rows_before} → {rows_after})")
+    
+    # Remove constant columns (zero variance) which cause singular matrix issues
+    constant_cols = [col for col in df.columns if df[col].std() == 0]
+    if constant_cols:
+        print(f"Auto-dropping {len(constant_cols)} constant columns (zero variance): {constant_cols}")
+        df = df.drop(columns=constant_cols)
     
     print(f"Final dataset: {df.shape[0]} rows × {df.shape[1]} columns")
     print(f"Columns: {list(df.columns)}")
