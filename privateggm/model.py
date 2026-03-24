@@ -1,4 +1,3 @@
-import time
 import numpy as np
 from scipy.linalg import solve, cholesky, eigh
 from scipy.optimize import line_search
@@ -38,25 +37,15 @@ def loss_fn(z, inds, Sigma_tilde_vec, d, weights=None):
 
     return total_loss
 
-def optimize_lbfgs(Sigma_tilde_vec, z, inds, d, max_iters=500, verbose=False,
-                   t0=None, hist_obj_fn=None):
+def optimize_lbfgs(Sigma_tilde_vec, z, inds, d, max_iters=500, verbose=False):
     """
     Sigma_tilde_vec [np.array]: matrix of observed (privatized) covariance entries
     z [jnp.array]: vector supporting K(z)
     inds [np.array]: vector of indices of nonzero covariance entries
     d [int]: number of attributes
-    t0 [float]: optional wall-clock start time for hist entries (time.time())
-    hist_obj_fn [callable]: optional fn(Sigma_np) -> float for primal obj in hist
-
-    Returns: (z, g_vals, obj_vals, hist)
-      hist is a list of per-accepted-step dicts with keys time, obj, entropy.
     """
 
-    if t0 is None:
-        t0 = time.time()
-
-    rows = inds[:, 0]
-    cols = inds[:, 1]
+    # rng_key = jrandom.PRNGKey(42)
 
     # Linesearch
     linesearch = optax.scale_by_zoom_linesearch(max_linesearch_steps=15)
@@ -87,7 +76,6 @@ def optimize_lbfgs(Sigma_tilde_vec, z, inds, d, max_iters=500, verbose=False,
     # Optimization loop
     g_vals = []
     obj_vals = []
-    hist = []
     prev_v = None
     tol = 1e-8
     eta = 1.0
@@ -107,21 +95,6 @@ def optimize_lbfgs(Sigma_tilde_vec, z, inds, d, max_iters=500, verbose=False,
 
         obj_vals.append(v.item())
         g_vals.append(grad_sum.item())
-
-        # Collect hist diagnostics for benchmark compatibility
-        try:
-            K_np = np.array(get_K(z, inds, d))
-            sign, logdet_K = np.linalg.slogdet(K_np)
-            entropy = float(-logdet_K) if sign > 0 else float('nan')
-            if hist_obj_fn is not None and sign > 0:
-                Sigma_np = np.linalg.inv(K_np)
-                obj_hist = hist_obj_fn(Sigma_np)
-            else:
-                obj_hist = float('nan')
-        except Exception:
-            entropy = float('nan')
-            obj_hist = float('nan')
-        hist.append({'time': time.time() - t0, 'obj': obj_hist, 'entropy': entropy})
 
         if verbose and i % 100 == 0:
             print(f"Iter {i:5d} | Obj: {v:.3e} | Grad Sum: {grad_sum:.3e} | η: {eta:.3e}")
@@ -158,7 +131,7 @@ def optimize_lbfgs(Sigma_tilde_vec, z, inds, d, max_iters=500, verbose=False,
         print(f"  • Nearly singular:   {is_nearly_singular} (min eigval: {min_eigval:.2e})")
         print("-" * 60)
 
-    return z, g_vals, obj_vals, hist
+    return z, g_vals, obj_vals
 
 
 # MIRROR DESCENT METHOD
@@ -416,18 +389,12 @@ def gold_standard_line_search(Sig, g, Sig_prev, g_prev, obj_fn, project_fn, hist
     return Sig_candidate, step, obj_candidate, max_bt
 
 
-def projected_gradient_descent(S_observed, mask, weights=None, eta=0.1, max_iters=5000, tol=1e-8, verbose=False,
-                               t0=None, hist_obj_fn=None):
+def projected_gradient_descent(S_observed, mask, weights=None, eta=0.1, max_iters=5000, tol=1e-8, verbose=False):
     """
     Projected gradient descent with backtracking line search.
-
-    t0 [float]: optional wall-clock start time for hist entries (time.time())
-    hist_obj_fn [callable]: optional fn(Sigma) -> float for primal obj in hist;
-                            if None, uses the internal weighted objective.
     """
-    if t0 is None:
-        t0 = time.time()
-    start_time = t0
+    import time
+    start_time = time.time()
     
     d = S_observed.shape[0]
     assert mask.shape == S_observed.shape
@@ -485,47 +452,40 @@ def projected_gradient_descent(S_observed, mask, weights=None, eta=0.1, max_iter
     prev = Sigma.copy()
     g_prev = grad(Sigma)
     conv = {'objectives': [], 'grad_norms': [], 'step_norms': [], 'ls_iters': [], 'converged': False}
-    hist_entries = []
-
+    
     # No progress tracking
     no_progress_count = 0
     no_progress_threshold = 100  # Stop if no progress for 100 iterations
-
+    
     # Initialize history for non-monotone line search (gold standard)
     history_objs = deque(maxlen=5)
     history_objs.append(obj(Sigma))
-
+    
     # Main loop
     for t in range(max_iters):
         # Current gradient
         g = grad(Sigma)
         g_norm = np.linalg.norm(g)
         obj_before = obj(Sigma)
-
+        
         # Use gold standard line search (BB initialization + non-monotone backtracking)
         Sig_new, step, obj_candidate, ls = gold_standard_line_search(
-            Sigma, g, prev, g_prev, obj, project_fn=project_psd,
+            Sigma, g, prev, g_prev, obj, project_fn=project_psd, 
             history_objs=history_objs, max_bt=20
         )
-
+        
         obj_after = obj(Sig_new)
         history_objs.append(obj_after)
-
+        
         conv['objectives'].append(obj_after)
         conv['grad_norms'].append(g_norm)
         conv['step_norms'].append(np.linalg.norm(Sig_new - prev, 'fro'))
         conv['ls_iters'].append(ls)
-
-        # Collect benchmark-compatible hist entry
-        Sig_np = np.array(Sig_new)
-        _, log_det = np.linalg.slogdet(Sig_np)
-        obj_hist = hist_obj_fn(Sig_np) if hist_obj_fn is not None else float(obj_after)
-        hist_entries.append({'time': time.time() - t0, 'obj': obj_hist, 'entropy': float(log_det)})
-
+        
         # Print every 100 iterations instead of every iteration
         if (t + 1) % 100 == 0:
             print(f"  [LS {t+1:4d}] obj={obj_after:.2e} grad={g_norm:.2e} Δ={conv['step_norms'][-1]:.2e} α={step:.2e}")
-
+        
         # Check for no progress (objective not changing)
         if abs(obj_after - obj_before) < 1e-12:
             no_progress_count += 1
@@ -536,14 +496,14 @@ def projected_gradient_descent(S_observed, mask, weights=None, eta=0.1, max_iter
                 break
         else:
             no_progress_count = 0
-
+        
         # Check convergence based on gradient norm
         if not conv['converged'] and g_norm < 1e-10:
             conv['converged'] = True
             conv['termination_reason'] = 'gradient_converged'
             print(f"  [LS] Converged at iter {t+1} (grad={g_norm:.2e})")
             break
-
+        
         # Update for next iteration
         prev = Sigma.copy()
         g_prev = g.copy()
@@ -576,8 +536,6 @@ def projected_gradient_descent(S_observed, mask, weights=None, eta=0.1, max_iter
         print(f"  Complementary Slackness (<grad, W> ≈ 0): {kkt_dict['complementary_slackness']:.6e}")
         print(f"  Is Optimum: {is_optimum}")
     
-    conv['hist'] = hist_entries
-
     # Convert numpy arrays to lists for JSON serialization
     for key in ['objectives', 'grad_norms', 'step_norms', 'ls_iters']:
         if key in conv:
@@ -606,17 +564,15 @@ def pgd_maxent(Sigma_tilde, inds, noise_scales=None, max_iters=1000, eta=0.1, to
         
     Returns:
         Sigma_opt: Optimized covariance matrix
-        full_convergence_info: Dictionary with convergence info from both stages;
-                               also contains 'hist' key with benchmark-compatible
-                               per-iteration list (time, obj, entropy, stage).
+        full_convergence_info: Dictionary with convergence info from both stages
     """
-    t0 = time.time()
-
+    import time
+    pgd_maxent_start_time = time.time()
+    
     d = Sigma_tilde.shape[0]
-    rows, cols = inds[:, 0], inds[:, 1]
 
     # After (correct 2D mask)
-    mask = np.zeros(Sigma_tilde.shape, dtype=bool)
+    mask = np.zeros(Sigma_tilde.shape, dtype=bool)  
     for (i, j) in inds:
         mask[i, j] = True
         mask[j, i] = True  # Ensure symmetry
@@ -629,30 +585,16 @@ def pgd_maxent(Sigma_tilde, inds, noise_scales=None, max_iters=1000, eta=0.1, to
         weight_matrix = np.zeros_like(noise_scales)
         # Only compute weights for observed entries (avoid division by zero)
         raw_weights = 1.0 / (noise_scales[mask]**2)
-
+        
         # Standard inverse-variance weighting (no compression)
         weight_matrix[mask] = raw_weights
-
+        
         # Normalize weights so maximum is 1 (prevents numerical issues)
         max_weight = np.max(weight_matrix[mask])
         if max_weight > 0:
             weight_matrix[mask] = weight_matrix[mask] / max_weight
-
-        # Normalized weights as a vector over inds (for primal obj computation)
-        ns = noise_scales[rows, cols]
-        w_raw = np.where(ns > 0, 1.0 / ns**2, 0.0)
-        w_obs = w_raw / w_raw.max() if w_raw.max() > 0 else np.ones(len(rows))
     else:
         weight_matrix = None
-        w_obs = np.ones(len(rows))
-
-    # Primal objective function matching the benchmark convention:
-    #   f(X_E) = sum_{(i,j) in inds} w_ij * (X_ij - A_ij)^2
-    A_obs = Sigma_tilde[rows, cols]
-    def primal_obj_fn(Sigma_mat):
-        Sigma_np = np.array(Sigma_mat)
-        r = Sigma_np[rows, cols] - A_obs
-        return float(np.sum(w_obs * r**2))
 
     full_convergence_info = {}
 
@@ -661,15 +603,13 @@ def pgd_maxent(Sigma_tilde, inds, noise_scales=None, max_iters=1000, eta=0.1, to
         print("\n" + "="*60)
         print("STAGE A: Projected Gradient Descent")
         print("="*60)
-
+    
     Sigma_psd, pgd_convergence = projected_gradient_descent(
-        Sigma_obs, mask, weights=weight_matrix, eta=eta, max_iters=max_iters, tol=tol, verbose=verbose,
-        t0=t0, hist_obj_fn=primal_obj_fn,
+        Sigma_obs, mask, weights=weight_matrix, eta=eta, max_iters=max_iters, tol=tol, verbose=verbose
     )
-
+    
     full_convergence_info['pgd'] = pgd_convergence
-    stage_a_hist = [{**e, 'stage': 'A'} for e in pgd_convergence.get('hist', [])]
-
+    
     # Print PGD summary
     if verbose:
         print("\nPGD Summary:")
@@ -680,7 +620,7 @@ def pgd_maxent(Sigma_tilde, inds, noise_scales=None, max_iters=1000, eta=0.1, to
         print(f"  Final grad norm: {pgd_convergence['grad_norms'][-1]:.6e}")
         print(f"  Avg line search iters: {np.mean(pgd_convergence['ls_iters']):.2f}")
         print(f"  Time: {pgd_convergence['time_seconds']:.2f} seconds")
-
+    
     # DEBUG: Check PGD result
     if verbose:
         print(f"\nPGD result check:")
@@ -688,14 +628,13 @@ def pgd_maxent(Sigma_tilde, inds, noise_scales=None, max_iters=1000, eta=0.1, to
         eigvals_pgd = np.linalg.eigvalsh(Sigma_psd)
         print(f"  Eigenvalue range: [{np.min(eigvals_pgd):.2e}, {np.max(eigvals_pgd):.2e}]")
         print(f"  Condition number: {np.max(eigvals_pgd)/np.min(eigvals_pgd) if np.min(eigvals_pgd) > 1e-10 else np.inf:.2e}")
-
+    
     if np.any(np.isnan(Sigma_psd)) or np.any(np.isinf(Sigma_psd)):
         if verbose:
             print(f"\nERROR: PGD returned NaN/inf!")
             print(f"  Input Sigma_obs - NaN: {np.any(np.isnan(Sigma_obs))}, Inf: {np.any(np.isinf(Sigma_obs))}")
             if weight_matrix is not None:
                 print(f"  Weight matrix range: [{np.min(weight_matrix[mask]):.2e}, {np.max(weight_matrix[mask]):.2e}]")
-        full_convergence_info['hist'] = stage_a_hist
         return Sigma_psd, full_convergence_info
 
     # Stage B: Max Entropy Optimization
@@ -703,22 +642,20 @@ def pgd_maxent(Sigma_tilde, inds, noise_scales=None, max_iters=1000, eta=0.1, to
         print("\n" + "="*60)
         print("STAGE B: Max Entropy Refinement (L-BFGS)")
         print("="*60)
-
+    
+    import time
     lbfgs_start_time = time.time()
-
+    
     try:
         # Direct method (using your existing optimization pipeline)
+        rows, cols = inds[:, 0], inds[:, 1]
         Sigma_psd_vec = Sigma_psd[rows, cols]
-
+        
         z_init = initialize_z(Sigma_psd, inds)
-        z_opt, g_vals, obj_vals, stage_b_hist_raw = optimize_lbfgs(
-            Sigma_psd_vec, z_init, inds, d, max_iters=1000, verbose=verbose,
-            t0=t0, hist_obj_fn=primal_obj_fn,
-        )
-        stage_b_hist = [{**e, 'stage': 'B'} for e in stage_b_hist_raw]
-
+        z_opt, g_vals, obj_vals = optimize_lbfgs(Sigma_psd_vec, z_init, inds, d, max_iters=1000, verbose=verbose)
+        
         lbfgs_elapsed = time.time() - lbfgs_start_time
-
+        
         full_convergence_info['lbfgs'] = {
             'grad_vals': g_vals,
             'obj_vals': obj_vals,
@@ -726,19 +663,19 @@ def pgd_maxent(Sigma_tilde, inds, noise_scales=None, max_iters=1000, eta=0.1, to
             'converged': len(g_vals) > 0 and g_vals[-1] < 1e-8,
             'time_seconds': lbfgs_elapsed
         }
-
+        
         if verbose:
             print(f"\nL-BFGS Summary:")
             print(f"  Iterations: {len(obj_vals)}")
             print(f"  Final objective: {obj_vals[-1]:.6e}")
             print(f"  Final grad sum: {g_vals[-1]:.6e}")
             print(f"  Time: {lbfgs_elapsed:.2f} seconds")
-
+        
         K_z_opt = get_K(z_opt, inds, d)
-
+        
         Sigma_opt_before = np.linalg.inv(K_z_opt)
         Sigma_opt = project_to_PSD(Sigma_opt_before)  # Ensure PSD
-
+        
         if verbose:
             print(f"\nMax Entropy result check:")
             eigvals_me = np.linalg.eigvalsh(Sigma_opt)
@@ -750,12 +687,12 @@ def pgd_maxent(Sigma_tilde, inds, noise_scales=None, max_iters=1000, eta=0.1, to
             print(f"\nMax Entropy FAILED: {str(e)}")
             print(f"Returning PGD-only result")
         full_convergence_info['lbfgs'] = {'error': str(e)}
-        full_convergence_info['hist'] = stage_a_hist
-        full_convergence_info['total_time_seconds'] = time.time() - t0
+        pgd_maxent_elapsed = time.time() - pgd_maxent_start_time
+        full_convergence_info['total_time_seconds'] = pgd_maxent_elapsed
         return Sigma_psd, full_convergence_info
 
-    full_convergence_info['hist'] = stage_a_hist + stage_b_hist
-    full_convergence_info['total_time_seconds'] = time.time() - t0
+    pgd_maxent_elapsed = time.time() - pgd_maxent_start_time
+    full_convergence_info['total_time_seconds'] = pgd_maxent_elapsed
     return Sigma_opt, full_convergence_info
 
 
@@ -998,17 +935,17 @@ class IterativePrivateGGM:
             measured_array = np.array([[i,j] for i,j in self.measured_entries])
             z_init = initialize_z(self.Sigma_tilde, measured_array)
             
-            z_opt, _, _, _ = optimize_lbfgs(
-                self.Sigma_tilde[measured_array[:,0], measured_array[:,1]],
-                z_init,
-                measured_array,
-                self.d,
-                max_iters=100,
+            z_opt, _, _ = optimize_lbfgs(
+                self.Sigma_tilde[measured_array[:,0], measured_array[:,1]], 
+                z_init, 
+                measured_array, 
+                self.d, 
+                max_iters=100, 
                 verbose=False
             )
             K_z = get_K(z_opt, measured_array, self.d)
             return np.linalg.inv(K_z)
-
+        
         else:
             raise ValueError(f"Unknown optimizer: {self.optimizer}")
 
@@ -1313,16 +1250,16 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
             measured_array = np.array([[i,j] for i,j in self.measured_entries])
             z_init = initialize_z(self.Sigma_tilde, measured_array)
             
-            z_opt, _, _, _ = optimize_lbfgs(
-                self.Sigma_tilde[measured_array[:,0], measured_array[:,1]],
-                z_init,
-                measured_array,
-                self.d,
-                max_iters=100,
+            z_opt, _, _ = optimize_lbfgs(
+                self.Sigma_tilde[measured_array[:,0], measured_array[:,1]], 
+                z_init, 
+                measured_array, 
+                self.d, 
+                max_iters=100, 
                 verbose=False
             )
             K_z = get_K(z_opt, measured_array, self.d)
             return np.linalg.inv(K_z)
-
+        
         else:
             raise ValueError(f"Unknown optimizer: {self.optimizer}")
