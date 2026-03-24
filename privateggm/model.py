@@ -114,23 +114,6 @@ def optimize_lbfgs(Sigma_tilde_vec, z, inds, d, max_iters=500, verbose=False):
     # Final K(z) construction
     K_z = get_K(z, inds, d)
 
-    eigvals = np.linalg.eigvalsh(K_z)
-    min_eigval = np.min(eigvals)
-    max_eigval = np.max(eigvals)
-    cond_number = max_eigval / min_eigval if min_eigval > 1e-10 else np.inf
-
-    is_non_pd = not jnp.all(eigvals > 0)
-    is_ill_conditioned = cond_number > 1e10
-    is_nearly_singular = min_eigval < 1e-8
-
-    if is_non_pd or is_ill_conditioned or is_nearly_singular:
-        print("-" * 60)
-        print("jIssue detected with optimized K(z):")
-        print(f"  • Non-PD:            {is_non_pd}")
-        print(f"  • Ill-conditioned:   {is_ill_conditioned} (cond #: {cond_number:.2e})")
-        print(f"  • Nearly singular:   {is_nearly_singular} (min eigval: {min_eigval:.2e})")
-        print("-" * 60)
-
     return z, g_vals, obj_vals
 
 
@@ -280,16 +263,12 @@ def projected_bb_line_search(Sig, g, Sig_prev, g_prev, obj_fn, project_fn, debug
     
     if debug_this and project_fn is not None:
         print(f"    [BB LS iter {debug_iter}] Before projection: diag={np.diag(Sig_candidate)[:3]}")
-        cand_eigvals = np.linalg.eigvalsh(Sig_candidate)
-        print(f"    [BB LS iter {debug_iter}] Before projection: min_eigval={np.min(cand_eigvals):.6e}")
     
     # Apply projection
     Sig_new = project_fn(Sig_candidate)
     
     if debug_this and project_fn is not None:
         print(f"    [BB LS iter {debug_iter}] After projection: diag={np.diag(Sig_new)[:3]}")
-        new_eigvals = np.linalg.eigvalsh(Sig_new)
-        print(f"    [BB LS iter {debug_iter}] After projection: min_eigval={np.min(new_eigvals):.6e}")
         print(f"    [BB LS iter {debug_iter}] Objective: {obj_fn(Sig_new):.6e}")
     
     return Sig_new, step, 1  # BB takes exactly 1 iteration (no backtracking)
@@ -417,14 +396,12 @@ def projected_gradient_descent(S_observed, mask, weights=None, eta=0.1, max_iter
     S_eigvals = np.linalg.eigvalsh(S)
     needs_projection = np.any(S_eigvals < 0)
     if needs_projection:
-        print(f"  [PGD INIT] S has negative eigenvalues: min={np.min(S_eigvals):.6e}, needs PSD projection")
-        print(f"  [PGD INIT] S diagonal before projection: {np.diag(S)}")
+        print(f"  [PGD INIT] S needs PSD projection")
     
     Sigma = project_to_PSD(S, thresh=1e-3)
     
-    if needs_projection:
-        Sigma_eigvals = np.linalg.eigvalsh(Sigma)
-        print(f"  [PGD INIT] After projection: min_eigval={np.min(Sigma_eigvals):.6e}")
+    if needs_projection and verbose:
+        print(f"  [PGD INIT] S diagonal before projection: {np.diag(S)}")
         print(f"  [PGD INIT] Sigma diagonal after projection: {np.diag(Sigma)}")
         
         # Check objective and gradient at initial point
@@ -528,14 +505,6 @@ def projected_gradient_descent(S_observed, mask, weights=None, eta=0.1, max_iter
         **{k: float(v) for k, v in kkt_dict.items()}
     }
     
-    # Print KKT condition status
-    if verbose:
-        print(f"KKT Conditions at final point:")
-        print(f"  Primal Feasibility (min_eig_W >= 0): {kkt_dict['min_eig_W']:.6e} (residual: {kkt_dict['primal_feasibility']:.6e})")
-        print(f"  Dual Feasibility (min_eig_grad >= 0): {kkt_dict['min_eig_grad']:.6e} (residual: {kkt_dict['dual_feasibility']:.6e})")
-        print(f"  Complementary Slackness (<grad, W> ≈ 0): {kkt_dict['complementary_slackness']:.6e}")
-        print(f"  Is Optimum: {is_optimum}")
-    
     # Convert numpy arrays to lists for JSON serialization
     for key in ['objectives', 'grad_norms', 'step_norms', 'ls_iters']:
         if key in conv:
@@ -622,9 +591,6 @@ def pgd_maxent(Sigma_tilde, inds, noise_scales=None, max_iters=1000, eta=0.1, to
     if verbose:
         print(f"\nPGD result check:")
         print(f"  Value range: [{np.min(Sigma_psd):.6f}, {np.max(Sigma_psd):.6f}]")
-        eigvals_pgd = np.linalg.eigvalsh(Sigma_psd)
-        print(f"  Eigenvalue range: [{np.min(eigvals_pgd):.2e}, {np.max(eigvals_pgd):.2e}]")
-        print(f"  Condition number: {np.max(eigvals_pgd)/np.min(eigvals_pgd) if np.min(eigvals_pgd) > 1e-10 else np.inf:.2e}")
     
     if np.any(np.isnan(Sigma_psd)) or np.any(np.isinf(Sigma_psd)):
         if verbose:
@@ -674,10 +640,7 @@ def pgd_maxent(Sigma_tilde, inds, noise_scales=None, max_iters=1000, eta=0.1, to
         Sigma_opt = project_to_PSD(Sigma_opt_before)  # Ensure PSD
         
         if verbose:
-            print(f"\nMax Entropy result check:")
-            eigvals_me = np.linalg.eigvalsh(Sigma_opt)
-            print(f"  Eigenvalue range: [{np.min(eigvals_me):.2e}, {np.max(eigvals_me):.2e}]")
-            print(f"  Condition number: {np.max(eigvals_me)/np.min(eigvals_me) if np.min(eigvals_me) > 1e-10 else np.inf:.2e}")
+            print(f"\nMax Entropy result check: completed")
 
     except Exception as e:
         if verbose:
@@ -1032,7 +995,6 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
         Sigma_hat_init = self.get_current_estimate()
         self.Sigma_hat = Sigma_hat_init  # Store initial estimate
         self.Sigma_baseline = Sigma_hat_init.copy()  # Save baseline (diagonal-only estimate)
-        print(f"Initial estimate computed (condition number: {np.linalg.cond(Sigma_hat_init):.2e})")
         
         # ========================================
         # 2. Initialize per-round budgets
@@ -1169,18 +1131,8 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
                 continue
             
             # ========================================
-            # Print KKT conditions from convergence history
+            # Check measurement utility
             # ========================================
-            if hasattr(self, 'convergence_history') and len(self.convergence_history) > 0:
-                conv_info = self.convergence_history[-1]
-                if 'pgd' in conv_info and 'kkt' in conv_info['pgd']:
-                    kkt = conv_info['pgd']['kkt']
-                    print(f"KKT CONDITIONS (Round {round_num}):")
-                    print(f"  Optimum satisfied: {kkt['is_optimum']}")
-                    print(f"  Primal feasibility: {kkt['primal_feasibility']:.2e} (min_eig={kkt['min_eig_W']:.2e})")
-                    print(f"  Dual feasibility: {kkt['dual_feasibility']:.2e} (min_eig_grad={kkt['min_eig_grad']:.2e})")
-                    print(f"  Complementary slackness: {kkt['complementary_slackness']:.2e}")
-            
             old_estimate = Sigma_hat_old[i,j]
             new_estimate = Sigma_hat_new[i,j]
             diff = np.abs(new_estimate - old_estimate)
