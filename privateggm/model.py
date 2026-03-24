@@ -12,6 +12,9 @@ from collections import deque
 from privateggm.utils import *
 from privateggm.privacy import gaussian_mechanism, exponential_mechanism, cov_jk_sensitivity_l2, cov_jk_sensitivity_linf
 
+# Import optimized solvers
+from privateggm.solvers import pgd_maxent as pgd_maxent_solver, ipm_chol
+
 # DEBUG_MODE = True
 
 # DIRECT LBFGS OPTIMIZATION METHOD
@@ -113,6 +116,23 @@ def optimize_lbfgs(Sigma_tilde_vec, z, inds, d, max_iters=500, verbose=False):
 
     # Final K(z) construction
     K_z = get_K(z, inds, d)
+
+    eigvals = np.linalg.eigvalsh(K_z)
+    min_eigval = np.min(eigvals)
+    max_eigval = np.max(eigvals)
+    cond_number = max_eigval / min_eigval if min_eigval > 1e-10 else np.inf
+
+    is_non_pd = not jnp.all(eigvals > 0)
+    is_ill_conditioned = cond_number > 1e10
+    is_nearly_singular = min_eigval < 1e-8
+
+    if is_non_pd or is_ill_conditioned or is_nearly_singular:
+        print("-" * 60)
+        print("Issue detected with optimized K(z):")
+        print(f"  • Non-PD:            {is_non_pd}")
+        print(f"  • Ill-conditioned:   {is_ill_conditioned} (cond #: {cond_number:.2e})")
+        print(f"  • Nearly singular:   {is_nearly_singular} (min eigval: {min_eigval:.2e})")
+        print("-" * 60)
 
     return z, g_vals, obj_vals
 
@@ -1166,6 +1186,7 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
     def get_current_estimate(self):
         """
         Override parent method to convert dictionary noise_scales to numpy array
+        and support multiple solvers (Dan's optimized solvers or model.py fallbacks)
         """
         # Convert dictionary noise_scales to numpy array
         noise_scales_array = np.zeros((self.d, self.d))
@@ -1175,19 +1196,68 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
                 noise_scales_array[j, i] = scale  # Ensure symmetry
         
         if self.optimizer == "pgd-maxent":
-            inds = get_observed_Sigma_entries(self.Sigma_tilde)
-            Sigma_hat, convergence_info = pgd_maxent(self.Sigma_tilde, inds, noise_scales=noise_scales_array, 
-                            max_iters=1000, eta=0.1, tol=1e-8, verbose=False)
+            # Try to use optimized solver if available, fallback to model.py version
+            if SOLVERS_AVAILABLE and pgd_maxent_solver is not None:
+                try:
+                    inds = get_observed_Sigma_entries(self.Sigma_tilde)
+                    # Optimized solver: pgd_maxent(A, inds, tau, ...)
+                    # Convert our noise_scales to tau parameter
+                    tau = noise_scales_array.copy()
+                    tau[tau == 0] = 1.0  # Set unobserved entries to default
+                    
+                    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                        self.Sigma_tilde, inds, tau,
+                        eta=0.1, pgd_iters=2000, pgd_eps=1e-8,
+                        lbfgs_iters=500, eps=1e-8,
+                        track_kkt=False
+                    )
+                    
+                    # Store convergence info for this round
+                    if not hasattr(self, 'convergence_history'):
+                        self.convergence_history = []
+                    self.convergence_history.append({'solver': 'pgd_maxent_solver', 'hist': convergence_hist})
+                    
+                except Exception as e:
+                    print(f"WARNING: Dan's pgd_maxent failed ({str(e)}), falling back to model.py version")
+                    return self._get_estimate_pgd_maxent_model(noise_scales_array)
+            else:
+                return self._get_estimate_pgd_maxent_model(noise_scales_array)
             
-            # Store convergence info for this round
-            if not hasattr(self, 'convergence_history'):
-                self.convergence_history = []
-            self.convergence_history.append(convergence_info)
-            
-            # TODO: double check with Dan
             # Check if pgd_maxent returned NaN/inf
             if np.any(np.isnan(Sigma_hat)) or np.any(np.isinf(Sigma_hat)):
                 print("WARNING: pgd_maxent returned NaN/inf - keeping previous estimate")
+                return self.Sigma_hat
+            
+            return Sigma_hat
+        
+        elif self.optimizer == "ipm_chol":
+            # Use optimized IPM solver if available
+            if SOLVERS_AVAILABLE and ipm_chol is not None:
+                try:
+                    inds = get_observed_Sigma_entries(self.Sigma_tilde)
+                    tau = noise_scales_array.copy()
+                    tau[tau == 0] = 1.0
+                    
+                    Sigma_hat, convergence_hist = ipm_chol(
+                        self.Sigma_tilde, inds, tau,
+                        mu_init=1.0, mu_factor=0.5, eps=1e-8,
+                        max_outer=40, max_inner=200
+                    )
+                    
+                    # Store convergence info
+                    if not hasattr(self, 'convergence_history'):
+                        self.convergence_history = []
+                    self.convergence_history.append({'solver': 'ipm_chol_solver', 'hist': convergence_hist})
+                    
+                except Exception as e:
+                    print(f"WARNING: ipm_chol failed ({str(e)}), falling back to pgd_maxent")
+                    return self._get_estimate_pgd_maxent_model(noise_scales_array)
+            else:
+                print("WARNING: ipm_chol not available, falling back to pgd_maxent")
+                return self._get_estimate_pgd_maxent_model(noise_scales_array)
+            
+            if np.any(np.isnan(Sigma_hat)) or np.any(np.isinf(Sigma_hat)):
+                print("WARNING: ipm_chol returned NaN/inf - keeping previous estimate")
                 return self.Sigma_hat
             
             return Sigma_hat
@@ -1209,3 +1279,16 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
         
         else:
             raise ValueError(f"Unknown optimizer: {self.optimizer}")
+    
+    def _get_estimate_pgd_maxent_model(self, noise_scales_array):
+        """Fallback to model.py pgd_maxent implementation"""
+        inds = get_observed_Sigma_entries(self.Sigma_tilde)
+        Sigma_hat, convergence_info = pgd_maxent(self.Sigma_tilde, inds, noise_scales=noise_scales_array, 
+                        max_iters=1000, eta=0.1, tol=1e-8, verbose=False)
+        
+        # Store convergence info for this round
+        if not hasattr(self, 'convergence_history'):
+            self.convergence_history = []
+        self.convergence_history.append({'solver': 'model_pgd_maxent', 'info': convergence_info})
+        
+        return Sigma_hat
