@@ -47,7 +47,7 @@ def exponential_mechanism(rng, flat_scores, Delta_cov_jk, rho):
 
 def SSP_covariance(cov_matrix, cov_sensitivity, rho, rng=None, ssp_seed=1):
     """
-    Simultaneous Structured Perturbation for covariance matrices.
+    SSP for covariance matrices.
     
     See Overleaf for derivation
     """
