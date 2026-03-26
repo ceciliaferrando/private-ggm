@@ -38,6 +38,7 @@ def run_experiment(
     sensitivity_type='linf',
     allow_remeasurement=True,
     output_dir='results/linesearch',
+    optimizer='pgd_maxent_solver',
     seed=42
 ):
     """
@@ -66,6 +67,8 @@ def run_experiment(
             Whether to allow remeasuring entries
         output_dir : str
             Output directory for results
+        optimizer : str
+            Optimization method ('pgd-maxent', 'ipm_chol', or 'lbfgs')
         seed : int
             Random seed
     """
@@ -82,6 +85,7 @@ def run_experiment(
             'n_trials': n_trials,
             'sensitivity_type': sensitivity_type,
             'allow_remeasurement': allow_remeasurement,
+            'optimizer': optimizer,
             'seed': seed
         },
         'results': {}
@@ -229,6 +233,7 @@ def run_experiment(
                     max_rounds=max_rounds,
                     sensitivity_type=sensitivity_type,
                     norm_bound=T,
+                    optimizer=optimizer,
                     allow_remeasurement=allow_remeasurement
                 )
                 
@@ -272,6 +277,15 @@ def run_experiment(
                 mah_error = mahalanobis_cov_error(Sigma_true, Sigma_est)
                 frob_error = frobenius_error(Sigma_true, Sigma_est)
                 
+                # Compute diagonal-only baseline errors
+                Sigma_baseline = model.Sigma_baseline if hasattr(model, 'Sigma_baseline') else None
+                if Sigma_baseline is not None:
+                    mah_error_baseline = mahalanobis_cov_error(Sigma_true, Sigma_baseline)
+                    frob_error_baseline = frobenius_error(Sigma_true, Sigma_baseline)
+                else:
+                    mah_error_baseline = None
+                    frob_error_baseline = None
+                
                 # Compute SSP baseline with same privacy budget
                 Sigma_SSP, ssp_noise_scale = SSP_covariance(Sigma_true, ssp_sensitivity, rho, rng=trial_rng)
                 mah_error_ssp = mahalanobis_cov_error(Sigma_true, Sigma_SSP)
@@ -312,6 +326,11 @@ def run_experiment(
                         'entry_to_rounds': entry_to_rounds_serialized,
                         'kkt_conditions': kkt_summary
                     },
+                    'baseline': {
+                        'mahalanobis_error': float(mah_error_baseline) if mah_error_baseline is not None else None,
+                        'frobenius_error': float(frob_error_baseline) if frob_error_baseline is not None else None,
+                        'estimated_cov': Sigma_baseline.tolist() if Sigma_baseline is not None else None
+                    },
                     'ssp': {
                         'mahalanobis_error': float(mah_error_ssp),
                         'frobenius_error': float(frob_error_ssp),
@@ -325,6 +344,8 @@ def run_experiment(
                 
                 print(f"Trial completed successfully")
                 print(f"  Annealing: Mah={mah_error:.4f}, Frob={frob_error:.4f}")
+                if mah_error_baseline is not None:
+                    print(f"  Baseline:  Mah={mah_error_baseline:.4f}, Frob={frob_error_baseline:.4f}")
                 print(f"  SSP:       Mah={mah_error_ssp:.4f}, Frob={frob_error_ssp:.4f}")
                 print(f"  Total measurements: {len(model.measurements)}")
                 print(f"  SSP noise scale: {ssp_noise_scale:.6e}")
@@ -401,6 +422,8 @@ if __name__ == '__main__':
                         help='Disable remeasuring entries (explicit flag)')
     parser.add_argument('--output-dir', type=str, default='results/linesearch',
                         help='Output directory for results (default: results/linesearch)')
+    parser.add_argument('--optimizer', type=str, default='pgd_maxent_solver', choices=['pgd_maxent_solver', 'pgd-maxent', 'ipm_chol', 'lbfgs'],
+                        help='Optimization method to use (default: pgd_maxent_solver - Dan\'s optimized PGD solver; pgd-maxent for old model.py version)')
     parser.add_argument('--seed', type=int, default=42,
                         help='Random seed')
     
@@ -431,6 +454,7 @@ if __name__ == '__main__':
     print(f"Trials: {args.n_trials}")
     print(f"Sensitivity type: {args.sensitivity_type}")
     print(f"Allow remeasurement: {allow_remeasurement}")
+    print(f"Optimizer: {args.optimizer}")
     print(f"Seed: {args.seed}")
     print("="*80)
     
@@ -446,5 +470,6 @@ if __name__ == '__main__':
         sensitivity_type=args.sensitivity_type,
         allow_remeasurement=allow_remeasurement,
         output_dir=args.output_dir,
+        optimizer=args.optimizer,
         seed=args.seed
     )
