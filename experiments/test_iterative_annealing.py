@@ -114,7 +114,7 @@ def run_experiment(
 
     else:  # real data
         # Load target columns from JSON file
-        target_columns_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'target_columns.json')
+        target_columns_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'target_columns.json')
         target_col = None
         
         if os.path.exists(target_columns_path):

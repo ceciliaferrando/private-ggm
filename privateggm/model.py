@@ -114,25 +114,22 @@ def optimize_lbfgs(Sigma_tilde_vec, z, inds, d, max_iters=500, verbose=False):
 
         prev_v = v
 
-    # Final K(z) construction
-    K_z = get_K(z, inds, d)
-
-    eigvals = np.linalg.eigvalsh(K_z)
-    min_eigval = np.min(eigvals)
-    max_eigval = np.max(eigvals)
-    cond_number = max_eigval / min_eigval if min_eigval > 1e-10 else np.inf
-
-    is_non_pd = not jnp.all(eigvals > 0)
-    is_ill_conditioned = cond_number > 1e10
-    is_nearly_singular = min_eigval < 1e-8
-
-    if is_non_pd or is_ill_conditioned or is_nearly_singular:
-        print("-" * 60)
-        print("Issue detected with optimized K(z):")
-        print(f"  • Non-PD:            {is_non_pd}")
-        print(f"  • Ill-conditioned:   {is_ill_conditioned} (cond #: {cond_number:.2e})")
-        print(f"  • Nearly singular:   {is_nearly_singular} (min eigval: {min_eigval:.2e})")
-        print("-" * 60)
+    # DEBUG: Final K(z) construction diagnostics (commented out for speed)
+    # K_z = get_K(z, inds, d)
+    # eigvals = np.linalg.eigvalsh(K_z)
+    # min_eigval = np.min(eigvals)
+    # max_eigval = np.max(eigvals)
+    # cond_number = max_eigval / min_eigval if min_eigval > 1e-10 else np.inf
+    # is_non_pd = not jnp.all(eigvals > 0)
+    # is_ill_conditioned = cond_number > 1e10
+    # is_nearly_singular = min_eigval < 1e-8
+    # if is_non_pd or is_ill_conditioned or is_nearly_singular:
+    #     print("-" * 60)
+    #     print("Issue detected with optimized K(z):")
+    #     print(f"  • Non-PD:            {is_non_pd}")
+    #     print(f"  • Ill-conditioned:   {is_ill_conditioned} (cond #: {cond_number:.2e})")
+    #     print(f"  • Nearly singular:   {is_nearly_singular} (min eigval: {min_eigval:.2e})")
+    #     print("-" * 60)
 
     return z, g_vals, obj_vals
 
@@ -780,21 +777,41 @@ class IterativePrivateGGM:
         # TO-DO: double check analysis
         return base_sensitivity
 
-    def compute_entry_scores(self, Sigma_hat):
+    def compute_entry_scores(self, Sigma_hat, allow_remeasurement=False):
         """
-        Compute scores for ALL off-diagonal entries (allows remeasuring)
+        Compute scores for entries (allows remeasuring)
         Score is based on discrepancy between empirical and current estimate
+        
+        Args:
+            Sigma_hat: Current covariance estimate
+            allow_remeasurement: If True, include diagonal entries. If False, only off-diagonal.
         """
         scores = np.zeros((self.d, self.d))
         
-        # Score all off-diagonal entries (both measured and unmeasured)
-        for i in range(self.d):
-            for j in range(i+1, self.d):  # Only upper triangular, off-diagonal
-                score = np.abs(self.empirical_cov[i,j] - Sigma_hat[i,j])
-                # Handle NaN values by using a large score (high priority to measure)
-                if np.isnan(score):
-                    score = np.abs(self.empirical_cov[i,j])  # Use empirical value as score
-                scores[i,j] = score
+        # Determine which entries to score
+        if allow_remeasurement:
+            # Include diagonal and upper triangular
+            for i in range(self.d):
+                for j in range(i, self.d):  # Start from i to include diagonal
+                    score = np.abs(self.empirical_cov[i,j] - Sigma_hat[i,j])
+                    scores[i,j] = score
+        else:
+            # Only off-diagonal entries
+            for i in range(self.d):
+                for j in range(i+1, self.d):  # Only upper triangular, off-diagonal
+                    score = np.abs(self.empirical_cov[i,j] - Sigma_hat[i,j])
+                    scores[i,j] = score
+        
+        # Handle NaN values: replace with 2x the max of non-NaN scores
+        non_nan_scores = scores[~np.isnan(scores)]
+        if len(non_nan_scores) > 0:
+            max_non_nan = np.max(non_nan_scores)
+            nan_value = 2.0 * max_non_nan
+        else:
+            # All scores are NaN, use a default large value
+            nan_value = 1e6
+        
+        scores[np.isnan(scores)] = nan_value
                     
         return scores
 
@@ -912,7 +929,7 @@ class IterativePrivateGGM:
             Sigma_hat, convergence_hist = pgd_maxent_solver(
                 self.Sigma_tilde, inds, tau,
                 eta=0.1, pgd_iters=2000, pgd_eps=1e-8,
-                lbfgs_iters=500, eps=1e-8,
+                lbfgs_iters=1000, eps=1e-8,
                 track_kkt=False
             )
             
@@ -1098,7 +1115,7 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
                 self.rho_per_round_measure  = remaining_budget * (1 - self.beta)
             
             # Compute scores for candidate entries (using previous round's estimate)
-            scores = self.compute_entry_scores(Sigma_hat_old)
+            scores = self.compute_entry_scores(Sigma_hat_old, allow_remeasurement=self.allow_remeasurement)
 
             # Collect candidate entries (if remeasure allowed, diagonal included)
             candidate_pairs = []
@@ -1251,8 +1268,8 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
             
             Sigma_hat, convergence_hist = pgd_maxent_solver(
                 self.Sigma_tilde, inds, tau,
-                eta=0.1, pgd_iters=5000, pgd_eps=1e-8,
-                lbfgs_iters=500, eps=1e-8,
+                eta=0.1, pgd_iters=2000, pgd_eps=1e-8,
+                lbfgs_iters=1000, eps=1e-8,
                 track_kkt=False
             )
             
