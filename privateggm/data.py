@@ -38,8 +38,16 @@ def load_data(data_dir, data_name="housing", target_column=None, drop_columns=No
     
     # Auto-detect if CSV has a header by checking if first row is numeric
     header = 'infer'  # Default behavior
-    with open(data_path, 'r') as f:
-        first_line = f.readline().strip()
+    first_line = None
+    for encoding in ['utf-8', 'cp1252', 'latin-1', 'iso-8859-1']:
+        try:
+            with open(data_path, 'r', encoding=encoding) as f:
+                first_line = f.readline().strip()
+            break
+        except Exception:
+            continue
+    
+    if first_line is not None:
         # Try to parse first line as floats - if all numeric, likely data not header
         try:
             values = first_line.split(',')
@@ -53,13 +61,13 @@ def load_data(data_dir, data_name="housing", target_column=None, drop_columns=No
             pass
     
     # Try different encodings
-    for encoding in ['utf-8', 'latin-1', 'iso-8859-1', 'cp1252']:
+    for encoding in ['utf-8', 'cp1252', 'latin-1', 'iso-8859-1']:
         try:
             df = pd.read_csv(data_path, encoding=encoding, header=header)
             if encoding != 'utf-8':
                 print(f"Successfully loaded {data_name} with encoding: {encoding}")
             break
-        except (UnicodeDecodeError, UnicodeError):
+        except Exception:
             continue
     else:
         raise UnicodeDecodeError(f"Could not decode {data_path} with any common encoding")
@@ -79,8 +87,9 @@ def load_data(data_dir, data_name="housing", target_column=None, drop_columns=No
         id_patterns = ['order', 'pid', 'id', 'index', 'year', 'date']
         id_cols_to_drop = []
         for col in df.columns:
-            col_lower = col.lower().replace('_', '').replace(' ', '')
-            if col_lower in id_patterns or col_lower.endswith('id'):
+            # Convert to string in case column name is an integer (headerless CSV)
+            col_str = str(col).lower().replace('_', '').replace(' ', '')
+            if col_str in id_patterns or col_str.endswith('id'):
                 id_cols_to_drop.append(col)
         
         if id_cols_to_drop:
@@ -100,10 +109,16 @@ def load_data(data_dir, data_name="housing", target_column=None, drop_columns=No
     # Drop target column if specified
     if target_column is not None:
         if target_column not in df.columns:
-            print(f"Warning: Target column '{target_column}' not found in dataset")
+            print(f"WARNING: Target column '{target_column}' not found in dataset! Already removed by auto-drop?")
+            print(f"  Available columns: {list(df.columns)}")
         else:
-            print(f"Dropping target column: {target_column}")
+            print(f"Dropping target column: '{target_column}'")
+            before_drop = df.shape
             df = df.drop(columns=[target_column])
+            after_drop = df.shape
+            print(f"  Shape before: {before_drop}, after: {after_drop}")
+    else:
+        print(f"No target column specified")
     
     # Drop rows with any missing values
     rows_before = len(df)
@@ -160,12 +175,15 @@ def compute_and_save_bounds(data_df, outdir, rescale=True):
     bounds_path = os.path.join(outdir, f"L_bounds_rescale{rescale}.json")
     d = data_df.shape[1]
     
-    # Load existing bounds if file exists
-    if os.path.exists(bounds_path):
-        with open(bounds_path, "r") as f:
-            bounds = json.load(f)
-    else:
-        bounds = {}
+    # Load existing bounds if file exists and is non-empty
+    bounds = {}
+    if os.path.exists(bounds_path) and os.path.getsize(bounds_path) > 0:
+        try:
+            with open(bounds_path, "r") as f:
+                bounds = json.load(f)
+        except (json.JSONDecodeError, ValueError):
+            # File corrupted or empty, start fresh
+            bounds = {}
     
     bounds[str(d)] = {"l2": float(L2_bound), "linf": float(Linf_bound)}
     
