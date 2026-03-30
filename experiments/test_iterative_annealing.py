@@ -422,8 +422,9 @@ def run_experiment(
     print(f"All results saved to {output_file}")
     print(f"{'='*80}")
     
-    # Save measurements to JSON file
-    measurements_output_file = os.path.join(output_dir, 'measurements.out')
+    # Save measurements to JSON file (prefixed with dataset name)
+    dataset_prefix = data_name if data_type == 'real' else 'synthetic'
+    measurements_output_file = os.path.join(output_dir, f'{dataset_prefix}_measurements.out')
     save_measurements(all_measurements, measurements_output_file)
     print(f"Measurements saved to {measurements_output_file}")
     
