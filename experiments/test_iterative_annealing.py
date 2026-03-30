@@ -26,6 +26,15 @@ def save_results(results, output_file):
     print(f"  → Results saved to {output_file}")
 
 
+def save_measurements(measurements_record, output_file):
+    """Save measurements record to NDJSON file (one JSON per line)."""
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    with open(output_file, 'a') as f:  # append mode
+        json.dump(measurements_record, f)
+        f.write('\n')
+
+
+
 def run_experiment(
     data_type='synthetic',
     data_name=None,
@@ -341,6 +350,24 @@ def run_experiment(
                 }
                 
                 results['results'][rho].append(trial_results)
+                
+                # Save measurements to separate file
+                measured_entries_list = sorted(list(model.measured_entries))
+                measurements_record = {
+                    'dataset': data_name if data_type == 'real' else 'synthetic',
+                    'trial': trial,
+                    'rho': float(rho),
+                    'd': int(d),
+                    'n': int(X.shape[0]),
+                    'allow_remeasurement': allow_remeasurement,
+                    'optimizer': optimizer,
+                    'measured_entries': measured_entries_list,
+                    'n_measured': len(measured_entries_list),
+                    'n_diagonal': sum(1 for i, j in measured_entries_list if i == j),
+                    'n_offdiagonal': sum(1 for i, j in measured_entries_list if i != j),
+                }
+                measurements_output_file = os.path.join(output_dir, 'measurements.out')
+                save_measurements(measurements_record, measurements_output_file)
                 
                 print(f"Trial completed successfully")
                 print(f"  Annealing: Mah={mah_error:.4f}, Frob={frob_error:.4f}")
