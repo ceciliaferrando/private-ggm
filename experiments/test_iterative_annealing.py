@@ -26,12 +26,12 @@ def save_results(results, output_file):
     print(f"  → Results saved to {output_file}")
 
 
-def save_measurements(measurements_record, output_file):
-    """Save measurements record to NDJSON file (one JSON per line)."""
+def save_measurements(measurements_records, output_file):
+    """Save measurements records to JSON file."""
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
-    with open(output_file, 'a') as f:  # append mode
-        json.dump(measurements_record, f)
-        f.write('\n')
+    with open(output_file, 'w') as f:
+        json.dump(measurements_records, f, indent=2)
+
 
 
 
@@ -206,6 +206,9 @@ def run_experiment(
     print(f"  Allow remeasurement: {allow_remeasurement}")
     print(f"  Weight exponent: 0.3 (hardcoded in model)")
 
+    # Measurements tracking
+    all_measurements = []
+
     # Loop over rho values
     for rho in rho_values:
         print(f"\n{'='*80}")
@@ -351,7 +354,7 @@ def run_experiment(
                 
                 results['results'][rho].append(trial_results)
                 
-                # Save measurements to separate file
+                # Save measurements to dictionary tracking entry positions and rounds
                 measured_entries_list = sorted(list(model.measured_entries))
                 measurements_record = {
                     'dataset': data_name if data_type == 'real' else 'synthetic',
@@ -361,13 +364,12 @@ def run_experiment(
                     'n': int(X.shape[0]),
                     'allow_remeasurement': allow_remeasurement,
                     'optimizer': optimizer,
-                    'measured_entries': measured_entries_list,
+                    'entry_to_rounds': entry_to_rounds_serialized if hasattr(model, 'entry_to_rounds') else {},
                     'n_measured': len(measured_entries_list),
                     'n_diagonal': sum(1 for i, j in measured_entries_list if i == j),
                     'n_offdiagonal': sum(1 for i, j in measured_entries_list if i != j),
                 }
-                measurements_output_file = os.path.join(output_dir, 'measurements.out')
-                save_measurements(measurements_record, measurements_output_file)
+                all_measurements.append(measurements_record)
                 
                 print(f"Trial completed successfully")
                 print(f"  Annealing: Mah={mah_error:.4f}, Frob={frob_error:.4f}")
@@ -419,6 +421,11 @@ def run_experiment(
     print(f"\n{'='*80}")
     print(f"All results saved to {output_file}")
     print(f"{'='*80}")
+    
+    # Save measurements to JSON file
+    measurements_output_file = os.path.join(output_dir, 'measurements.out')
+    save_measurements(all_measurements, measurements_output_file)
+    print(f"Measurements saved to {measurements_output_file}")
     
     return results
 
