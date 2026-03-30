@@ -1,0 +1,80 @@
+==========================================
+Running IPM on synthetic d=5
+==========================================
+usage: test_iterative_annealing.py [-h] [--data-type {synthetic,real}]
+                                   [--data-name DATA_NAME] [--d D] [--n N]
+                                   [--rho-values RHO_VALUES [RHO_VALUES ...]]
+                                   [--alpha ALPHA]
+                                   [--max-rounds-pct MAX_ROUNDS_PCT]
+                                   [--n-trials N_TRIALS]
+                                   [--sensitivity-type {l2,linf}]
+                                   [--allow-remeasurement]
+                                   [--no-remeasurement]
+                                   [--output-dir OUTPUT_DIR]
+                                   [--optimizer {pgd_maxent_solver,pgd-maxent,ipm_chol,lbfgs}]
+                                   [--seed SEED]
+test_iterative_annealing.py: error: unrecognized arguments: --data-dim 5
+==========================================
+Running IPM on synthetic d=10
+==========================================
+usage: test_iterative_annealing.py [-h] [--data-type {synthetic,real}]
+                                   [--data-name DATA_NAME] [--d D] [--n N]
+                                   [--rho-values RHO_VALUES [RHO_VALUES ...]]
+                                   [--alpha ALPHA]
+                                   [--max-rounds-pct MAX_ROUNDS_PCT]
+                                   [--n-trials N_TRIALS]
+                                   [--sensitivity-type {l2,linf}]
+                                   [--allow-remeasurement]
+                                   [--no-remeasurement]
+                                   [--output-dir OUTPUT_DIR]
+                                   [--optimizer {pgd_maxent_solver,pgd-maxent,ipm_chol,lbfgs}]
+                                   [--seed SEED]
+test_iterative_annealing.py: error: unrecognized arguments: --data-dim 10
+==========================================
+Running IPM on synthetic d=25
+==========================================
+usage: test_iterative_annealing.py [-h] [--data-type {synthetic,real}]
+                                   [--data-name DATA_NAME] [--d D] [--n N]
+                                   [--rho-values RHO_VALUES [RHO_VALUES ...]]
+                                   [--alpha ALPHA]
+                                   [--max-rounds-pct MAX_ROUNDS_PCT]
+                                   [--n-trials N_TRIALS]
+                                   [--sensitivity-type {l2,linf}]
+                                   [--allow-remeasurement]
+                                   [--no-remeasurement]
+                                   [--output-dir OUTPUT_DIR]
+                                   [--optimizer {pgd_maxent_solver,pgd-maxent,ipm_chol,lbfgs}]
+                                   [--seed SEED]
+test_iterative_annealing.py: error: unrecognized arguments: --data-dim 25
+==========================================
+Running IPM on synthetic d=50
+==========================================
+usage: test_iterative_annealing.py [-h] [--data-type {synthetic,real}]
+                                   [--data-name DATA_NAME] [--d D] [--n N]
+                                   [--rho-values RHO_VALUES [RHO_VALUES ...]]
+                                   [--alpha ALPHA]
+                                   [--max-rounds-pct MAX_ROUNDS_PCT]
+                                   [--n-trials N_TRIALS]
+                                   [--sensitivity-type {l2,linf}]
+                                   [--allow-remeasurement]
+                                   [--no-remeasurement]
+                                   [--output-dir OUTPUT_DIR]
+                                   [--optimizer {pgd_maxent_solver,pgd-maxent,ipm_chol,lbfgs}]
+                                   [--seed SEED]
+test_iterative_annealing.py: error: unrecognized arguments: --data-dim 50
+==========================================
+Running IPM on synthetic d=100
+==========================================
+usage: test_iterative_annealing.py [-h] [--data-type {synthetic,real}]
+                                   [--data-name DATA_NAME] [--d D] [--n N]
+                                   [--rho-values RHO_VALUES [RHO_VALUES ...]]
+                                   [--alpha ALPHA]
+                                   [--max-rounds-pct MAX_ROUNDS_PCT]
+                                   [--n-trials N_TRIALS]
+                                   [--sensitivity-type {l2,linf}]
+                                   [--allow-remeasurement]
+                                   [--no-remeasurement]
+                                   [--output-dir OUTPUT_DIR]
+                                   [--optimizer {pgd_maxent_solver,pgd-maxent,ipm_chol,lbfgs}]
+                                   [--seed SEED]
+test_iterative_annealing.py: error: unrecognized arguments: --data-dim 100

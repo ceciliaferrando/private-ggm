@@ -1,0 +1,19 @@
+======================================
+Running: Facebook (goldstandard)
+======================================
+usage: test_iterative_annealing.py [-h] [--data-type {synthetic,real}]
+                                   [--data-name DATA_NAME] [--d D] [--n N]
+                                   [--rho-values RHO_VALUES [RHO_VALUES ...]]
+                                   [--alpha ALPHA]
+                                   [--max-rounds-pct MAX_ROUNDS_PCT]
+                                   [--n-trials N_TRIALS]
+                                   [--sensitivity-type {l2,linf}]
+                                   [--allow-remeasurement]
+                                   [--no-remeasurement]
+                                   [--output-dir OUTPUT_DIR]
+                                   [--optimizer {pgd_maxent_solver,pgd-maxent,ipm_chol,lbfgs}]
+                                   [--seed SEED]
+test_iterative_annealing.py: error: argument --optimizer: invalid choice: 'pgd_maxent' (choose from pgd_maxent_solver, pgd-maxent, ipm_chol, lbfgs)
+======================================
+Completed: Facebook
+======================================

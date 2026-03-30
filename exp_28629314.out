@@ -1,0 +1,2740 @@
+/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/_shared.py:16: RuntimeWarning: divide by zero encountered in divide
+  w = 1.0 / tau ** 2
+/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/_shared.py:17: RuntimeWarning: invalid value encountered in divide
+  return w / w.max()
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+Traceback (most recent call last):
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 240, in run_experiment
+    Sigma_est = model.fit(X)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1064, in fit
+    Sigma_hat_init = self.get_current_estimate()
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/model.py", line 1252, in get_current_estimate
+    Sigma_hat, convergence_hist = pgd_maxent_solver(
+                                  ~~~~~~~~~~~~~~~~~^
+        self.Sigma_tilde, inds, tau,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        track_kkt=False
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 126, in pgd_maxent
+    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      track_kkt=track_kkt)
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/solvers/pgd_maxent.py", line 40, in pgd
+    W[inds[:, 0], inds[:, 1]] = w
+    ~^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+================================================================================
+ANNEALING ITERATIVE PRIVATE GGM EXPERIMENTS
+================================================================================
+Data type: real
+Dataset: adult
+Rho values: [0.0001, 0.001, 0.01, 0.1, 1.0, 2.0, 10.0]
+Alpha: 0.2
+Max rounds: 200% of off-diagonal entries
+Trials: 10
+Sensitivity type: linf
+Allow remeasurement: True
+Optimizer: pgd_maxent_solver
+Seed: 42
+================================================================================
+Warning: No target column specified for adult
+Loaded adult: 17037 rows × 6 columns
+Final dataset: 17037 rows × 6 columns
+Columns: ['age', 'fnlwgt', 'education-num', 'capital-gain', 'capital-loss', 'hours-per-week']
+Loaded adult: 17037 rows × 6 columns
+Columns: ['age', 'fnlwgt', 'education-num', 'capital-gain', 'capital-loss', 'hours-per-week']
+Original data shape: (17037, 6)
+Missing values per column:
+age               0
+fnlwgt            0
+education-num     0
+capital-gain      0
+capital-loss      0
+hours-per-week    0
+dtype: int64
+Data shape after dropping NaNs: (17037, 6)
+   Using analytical bounds after rescaling: L2=2.449, Linf=1
+
+Data statistics:
+X shape: (17037, 6)
+Data range: [-1.000, 1.000]
+Data mean: -0.515
+Data std: 0.503
+Sensitivity bound T: 1.000
+Number of NaNs: 0
+Number of Infs: 0
+
+Annealing mode parameters:
+  Allow remeasurement: True
+  Weight exponent: 0.3 (hardcoded in model)
+
+================================================================================
+Testing rho = 0.0001
+================================================================================
+
+Trial 1/10
+Running annealing algorithm with:
+  d=6, rho=0.0001, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.04546555551103383 (rho_used: 0.000020) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [ 0.15471949 -0.02682916  0.15062043  0.06560309 -0.03943403  0.00490951]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 1: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 2/10
+Running annealing algorithm with:
+  d=6, rho=0.0001, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.04546555551103383 (rho_used: 0.000020) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [ 0.23114504 -0.09761822  0.06862641  0.07754979  0.02063873  0.10392155]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 2: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 3/10
+Running annealing algorithm with:
+  d=6, rho=0.0001, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.04546555551103383 (rho_used: 0.000020) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [ 0.16276833 -0.00773556  0.06301887  0.07176195  0.05220923  0.01086016]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 3: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 4/10
+Running annealing algorithm with:
+  d=6, rho=0.0001, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.04546555551103383 (rho_used: 0.000020) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.13658558 0.00186276 0.17026277 0.03411045 0.08160189 0.13768869]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 4: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 5/10
+Running annealing algorithm with:
+  d=6, rho=0.0001, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.04546555551103383 (rho_used: 0.000020) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [ 0.20809592 -0.02364869  0.04900428  0.07142108  0.02411011 -0.00272008]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 5: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 6/10
+Running annealing algorithm with:
+  d=6, rho=0.0001, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.04546555551103383 (rho_used: 0.000020) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.15964583 0.12390043 0.10787159 0.03557575 0.0766853  0.021092  ]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 6: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 7/10
+Running annealing algorithm with:
+  d=6, rho=0.0001, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.04546555551103383 (rho_used: 0.000020) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [ 0.11416396  0.03285185  0.0898426  -0.0713898   0.00991535  0.08654503]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 7: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 8/10
+Running annealing algorithm with:
+  d=6, rho=0.0001, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.04546555551103383 (rho_used: 0.000020) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [ 0.19433769 -0.0414908   0.14702579 -0.03992001 -0.04346384  0.06202441]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 8: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 9/10
+Running annealing algorithm with:
+  d=6, rho=0.0001, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.04546555551103383 (rho_used: 0.000020) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [ 0.12920678 -0.02609262  0.1721996   0.05726531  0.04181623  0.13915655]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 9: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 10/10
+Running annealing algorithm with:
+  d=6, rho=0.0001, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.04546555551103383 (rho_used: 0.000020) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.10662813 0.08154705 0.09474722 0.00792075 0.04069792 0.15048794]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 10: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+================================================================================
+Testing rho = 0.001
+================================================================================
+
+Trial 1/10
+Running annealing algorithm with:
+  d=6, rho=0.001, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.014377471049968761 (rho_used: 0.000200) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14524642 0.00550195 0.12729034 0.03636273 0.02121992 0.04539177]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 1: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 2/10
+Running annealing algorithm with:
+  d=6, rho=0.001, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.014377471049968761 (rho_used: 0.000200) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [ 0.1694143  -0.01688351  0.10136156  0.04014061  0.04021659  0.07670213]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 2: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 3/10
+Running annealing algorithm with:
+  d=6, rho=0.001, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.014377471049968761 (rho_used: 0.000200) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14779169 0.01153988 0.0995883  0.03831033 0.05020006 0.04727354]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 3: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 4/10
+Running annealing algorithm with:
+  d=6, rho=0.001, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.014377471049968761 (rho_used: 0.000200) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.13951197 0.01457513 0.13350179 0.02640389 0.05949483 0.08738024]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 4: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 5/10
+Running annealing algorithm with:
+  d=6, rho=0.001, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.014377471049968761 (rho_used: 0.000200) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.16212553 0.00650771 0.09515649 0.03820254 0.04131434 0.04297909]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 5: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 6/10
+Running annealing algorithm with:
+  d=6, rho=0.001, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.014377471049968761 (rho_used: 0.000200) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14680426 0.05316683 0.11377197 0.02686725 0.05794007 0.05050913]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 6: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 7/10
+Running annealing algorithm with:
+  d=6, rho=0.001, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.014377471049968761 (rho_used: 0.000200) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [ 0.13242164  0.02437475  0.1080707  -0.00695822  0.03682556  0.07120719]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 7: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 8/10
+Running annealing algorithm with:
+  d=6, rho=0.001, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.014377471049968761 (rho_used: 0.000200) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.15777479 0.00086553 0.12615362 0.0029934  0.01994558 0.06345309]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 8: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 9/10
+Running annealing algorithm with:
+  d=6, rho=0.001, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.014377471049968761 (rho_used: 0.000200) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.13717859 0.00573487 0.13411427 0.03372609 0.0469135  0.08784442]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 9: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 10/10
+Running annealing algorithm with:
+  d=6, rho=0.001, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.014377471049968761 (rho_used: 0.000200) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.1300386  0.03977352 0.10962168 0.01812197 0.04655986 0.09142772]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 10: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+================================================================================
+Testing rho = 0.01
+================================================================================
+
+Trial 1/10
+Running annealing algorithm with:
+  d=6, rho=0.01, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.004546555551103383 (rho_used: 0.002000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14225077 0.01572595 0.11991272 0.02711612 0.04040038 0.05819339]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 1: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 2/10
+Running annealing algorithm with:
+  d=6, rho=0.01, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.004546555551103383 (rho_used: 0.002000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14989333 0.00864704 0.11171332 0.02831079 0.04640765 0.06809459]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 2: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 3/10
+Running annealing algorithm with:
+  d=6, rho=0.01, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.004546555551103383 (rho_used: 0.002000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14305566 0.01763531 0.11115257 0.027732   0.0495647  0.05878846]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 3: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 4/10
+Running annealing algorithm with:
+  d=6, rho=0.01, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.004546555551103383 (rho_used: 0.002000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14043738 0.01859514 0.12187695 0.02396685 0.05250397 0.07147131]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 4: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 5/10
+Running annealing algorithm with:
+  d=6, rho=0.01, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.004546555551103383 (rho_used: 0.002000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14758841 0.016044   0.10975111 0.02769792 0.04675479 0.05743043]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 5: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 6/10
+Running annealing algorithm with:
+  d=6, rho=0.01, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.004546555551103383 (rho_used: 0.002000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14274341 0.03079891 0.11563784 0.02411338 0.05201231 0.05981164]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 6: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 7/10
+Running annealing algorithm with:
+  d=6, rho=0.01, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.004546555551103383 (rho_used: 0.002000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.13819522 0.02169405 0.11383494 0.01341683 0.04533532 0.06635694]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 7: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 8/10
+Running annealing algorithm with:
+  d=6, rho=0.01, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.004546555551103383 (rho_used: 0.002000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14621259 0.01425978 0.11955326 0.01656381 0.0399974  0.06390488]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 8: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 9/10
+Running annealing algorithm with:
+  d=6, rho=0.01, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.004546555551103383 (rho_used: 0.002000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.1396995  0.0157996  0.12207064 0.02628234 0.0485254  0.07161809]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 9: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 10/10
+Running annealing algorithm with:
+  d=6, rho=0.01, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.004546555551103383 (rho_used: 0.002000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.13744164 0.02656357 0.1143254  0.02134788 0.04841357 0.07275123]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 10: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+================================================================================
+Testing rho = 0.1
+================================================================================
+
+Trial 1/10
+Running annealing algorithm with:
+  d=6, rho=0.1, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.0014377471049968763 (rho_used: 0.020000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14130346 0.01895906 0.11757971 0.02419208 0.04646577 0.06224162]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 1: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 2/10
+Running annealing algorithm with:
+  d=6, rho=0.1, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.0014377471049968763 (rho_used: 0.020000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14372025 0.01672051 0.11498683 0.02456987 0.04836544 0.06537265]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 2: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 3/10
+Running annealing algorithm with:
+  d=6, rho=0.1, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.0014377471049968763 (rho_used: 0.020000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14155799 0.01956285 0.11480951 0.02438684 0.04936379 0.06242979]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 3: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 4/10
+Running annealing algorithm with:
+  d=6, rho=0.1, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.0014377471049968763 (rho_used: 0.020000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14073002 0.01986638 0.11820086 0.0231962  0.05029326 0.06644046]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 4: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 5/10
+Running annealing algorithm with:
+  d=6, rho=0.1, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.0014377471049968763 (rho_used: 0.020000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14299138 0.01905963 0.11436633 0.02437606 0.04847521 0.06200035]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 5: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 6/10
+Running annealing algorithm with:
+  d=6, rho=0.1, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.0014377471049968763 (rho_used: 0.020000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14145925 0.02372555 0.11622787 0.02324254 0.05013779 0.06275335]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 6: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 7/10
+Running annealing algorithm with:
+  d=6, rho=0.1, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.0014377471049968763 (rho_used: 0.020000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14002099 0.02084634 0.11565775 0.01985999 0.04802634 0.06482316]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 7: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 8/10
+Running annealing algorithm with:
+  d=6, rho=0.1, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.0014377471049968763 (rho_used: 0.020000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.1425563  0.01849542 0.11746604 0.02085515 0.04633834 0.06404775]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 8: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 9/10
+Running annealing algorithm with:
+  d=6, rho=0.1, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.0014377471049968763 (rho_used: 0.020000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14049668 0.01898235 0.11826211 0.02392842 0.04903513 0.06648688]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 9: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 10/10
+Running annealing algorithm with:
+  d=6, rho=0.1, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.0014377471049968763 (rho_used: 0.020000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.13978268 0.02238622 0.11581285 0.02236801 0.04899977 0.06684521]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 10: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+================================================================================
+Testing rho = 1.0
+================================================================================
+
+Trial 1/10
+Running annealing algorithm with:
+  d=6, rho=1.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.0004546555551103384 (rho_used: 0.200000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.1410039  0.01998146 0.11684195 0.02326742 0.04838382 0.06352178]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 1: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 2/10
+Running annealing algorithm with:
+  d=6, rho=1.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.0004546555551103384 (rho_used: 0.200000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14176816 0.01927357 0.11602201 0.02338689 0.04898455 0.0645119 ]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 2: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 3/10
+Running annealing algorithm with:
+  d=6, rho=1.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.0004546555551103384 (rho_used: 0.200000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14108439 0.0201724  0.11596593 0.02332901 0.04930025 0.06358129]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 3: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 4/10
+Running annealing algorithm with:
+  d=6, rho=1.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.0004546555551103384 (rho_used: 0.200000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14082256 0.02026838 0.11703837 0.0229525  0.04959418 0.06484957]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 4: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 5/10
+Running annealing algorithm with:
+  d=6, rho=1.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.0004546555551103384 (rho_used: 0.200000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14153766 0.02001326 0.11582579 0.0233256  0.04901926 0.06344548]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 5: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 6/10
+Running annealing algorithm with:
+  d=6, rho=1.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.0004546555551103384 (rho_used: 0.200000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14105316 0.02148876 0.11641446 0.02296715 0.04954501 0.0636836 ]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 6: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 7/10
+Running annealing algorithm with:
+  d=6, rho=1.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.0004546555551103384 (rho_used: 0.200000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14059834 0.02057827 0.11623417 0.02189749 0.04887731 0.06433813]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 7: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 8/10
+Running annealing algorithm with:
+  d=6, rho=1.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.0004546555551103384 (rho_used: 0.200000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14140008 0.01983484 0.116806   0.02221219 0.04834352 0.06409293]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 8: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 9/10
+Running annealing algorithm with:
+  d=6, rho=1.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.0004546555551103384 (rho_used: 0.200000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14074877 0.01998882 0.11705774 0.02318404 0.04919632 0.06486425]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 9: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 10/10
+Running annealing algorithm with:
+  d=6, rho=1.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.0004546555551103384 (rho_used: 0.200000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14052299 0.02106522 0.11628322 0.0226906  0.04918514 0.06497756]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 10: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+================================================================================
+Testing rho = 2.0
+================================================================================
+
+Trial 1/10
+Running annealing algorithm with:
+  d=6, rho=2.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.00032149002612265435 (rho_used: 0.400000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14096332 0.02011995 0.11674202 0.02314217 0.04864363 0.06369518]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 1: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 2/10
+Running annealing algorithm with:
+  d=6, rho=2.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.00032149002612265435 (rho_used: 0.400000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14150373 0.01961939 0.11616223 0.02322665 0.04906841 0.0643953 ]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 2: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 3/10
+Running annealing algorithm with:
+  d=6, rho=2.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.00032149002612265435 (rho_used: 0.400000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14102024 0.02025496 0.11612258 0.02318572 0.04929164 0.06373726]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 3: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 4/10
+Running annealing algorithm with:
+  d=6, rho=2.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.00032149002612265435 (rho_used: 0.400000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.1408351  0.02032283 0.11688091 0.02291948 0.04949948 0.06463407]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 4: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 5/10
+Running annealing algorithm with:
+  d=6, rho=2.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.00032149002612265435 (rho_used: 0.400000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14134075 0.02014244 0.11602348 0.02318331 0.04909295 0.06364123]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 5: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 6/10
+Running annealing algorithm with:
+  d=6, rho=2.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.00032149002612265435 (rho_used: 0.400000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14099816 0.02118577 0.11643974 0.02292985 0.04946472 0.06380961]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 6: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 7/10
+Running annealing algorithm with:
+  d=6, rho=2.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.00032149002612265435 (rho_used: 0.400000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14067655 0.02054196 0.11631225 0.02217348 0.04899258 0.06427243]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 7: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 8/10
+Running annealing algorithm with:
+  d=6, rho=2.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.00032149002612265435 (rho_used: 0.400000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14124346 0.02001628 0.1167166  0.02239601 0.04861513 0.06409905]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 8: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 9/10
+Running annealing algorithm with:
+  d=6, rho=2.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.00032149002612265435 (rho_used: 0.400000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14078292 0.02012516 0.1168946  0.02308321 0.04921815 0.06464445]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 9: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 10/10
+Running annealing algorithm with:
+  d=6, rho=2.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.00032149002612265435 (rho_used: 0.400000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14062326 0.02088628 0.11634693 0.02273429 0.04921025 0.06472458]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 10: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+================================================================================
+Testing rho = 10.0
+================================================================================
+
+Trial 1/10
+Running annealing algorithm with:
+  d=6, rho=10.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.00014377471049968764 (rho_used: 2.000000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14090917 0.02030477 0.11660865 0.02297502 0.04899036 0.0639266 ]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 1: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 2/10
+Running annealing algorithm with:
+  d=6, rho=10.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.00014377471049968764 (rho_used: 2.000000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14115085 0.02008092 0.11634936 0.0230128  0.04918032 0.0642397 ]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 2: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 3/10
+Running annealing algorithm with:
+  d=6, rho=10.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.00014377471049968764 (rho_used: 2.000000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14093462 0.02036515 0.11633163 0.02299449 0.04928016 0.06394542]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 3: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 4/10
+Running annealing algorithm with:
+  d=6, rho=10.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.00014377471049968764 (rho_used: 2.000000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14085182 0.0203955  0.11667076 0.02287543 0.04937311 0.06434649]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 4: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 5/10
+Running annealing algorithm with:
+  d=6, rho=10.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.00014377471049968764 (rho_used: 2.000000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14107796 0.02031483 0.11628731 0.02299342 0.0491913  0.06390247]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 5: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 6/10
+Running annealing algorithm with:
+  d=6, rho=10.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.00014377471049968764 (rho_used: 2.000000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14092475 0.02078142 0.11647347 0.02288006 0.04935756 0.06397777]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 6: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 7/10
+Running annealing algorithm with:
+  d=6, rho=10.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.00014377471049968764 (rho_used: 2.000000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14078092 0.0204935  0.11641645 0.02254181 0.04914641 0.06418476]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 7: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 8/10
+Running annealing algorithm with:
+  d=6, rho=10.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.00014377471049968764 (rho_used: 2.000000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14103445 0.02025841 0.11659728 0.02264132 0.04897761 0.06410721]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 8: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 9/10
+Running annealing algorithm with:
+  d=6, rho=10.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.00014377471049968764 (rho_used: 2.000000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14082849 0.0203071  0.11667689 0.02294865 0.04924729 0.06435113]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 9: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+Trial 10/10
+Running annealing algorithm with:
+  d=6, rho=10.0, alpha=0.2
+  sensitivity_type=linf, norm_bound=1.0
+  allow_remeasurement=True
+  max_rounds: 30 (200% of 15 off-diagonal entries)
+%%%%% Diagonal noise scale: 0.00014377471049968764 (rho_used: 2.000000) %%%%%
+  True diagonal: [0.14086536 0.02045429 0.11650075 0.02283979 0.04927087 0.06411382]
+  Noisy diagonal: [0.14075709 0.02064749 0.11643196 0.02279261 0.04924376 0.06438696]
+
+Computing initial model estimate with diagonal entries...
+Error in trial 10: shape mismatch: value array of shape (6,6) could not be broadcast to indexing result of shape (6,)
+  → Results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+
+================================================================================
+All results saved to results/new_solvers/annealing_privacy_analysis_adult_d6_alpha0.2_remeasure.json
+================================================================================

@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import os
 import json
+import time
 from sklearn.preprocessing import MinMaxScaler
 
 def _is_numeric_string(s):
@@ -189,6 +190,11 @@ def compute_and_save_bounds(data_df, outdir, rescale=True):
     
     with open(bounds_path, "w") as f:
         json.dump(bounds, f, indent=4)
+        f.flush()
+        os.fsync(f.fileno())  # Ensure write is synced to disk on NFS
+    
+    # Small delay for NFS to fully propagate changes
+    time.sleep(0.1)
         
     return bounds_path
 
@@ -315,9 +321,21 @@ def load_and_process_data(data_path, bounds_path, clip_type="linf", rescale=None
     data = pd.read_csv(data_path)
     n, d = data.shape
 
-    # Load bound values from the JSON file.
-    with open(bounds_path, "r") as f:
-        bounds = json.load(f)
+    # Load bound values from the JSON file with retry logic for NFS
+    bounds = None
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            with open(bounds_path, "r") as f:
+                bounds = json.load(f)
+            break  # Success
+        except (json.JSONDecodeError, FileNotFoundError) as e:
+            if attempt < max_retries - 1:
+                print(f"   Warning: Failed to load bounds on attempt {attempt+1}/{max_retries}: {e}")
+                time.sleep(0.2)  # Wait and retry (NFS sync issue)
+            else:
+                raise ValueError(f"Failed to load bounds from {bounds_path} after {max_retries} attempts: {e}")
+    
     # We assume the key for the d-dimensional bound is stored as str(d).
     if str(d) not in bounds:
         raise ValueError(f"No bound values found for d = {d} in {bounds_path}.")

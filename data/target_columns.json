@@ -1,5 +1,5 @@
 {
-  "Adult": "class",
+  "adult": null,
   "SeoulBikeData": "Rented Bike Count",
   "BreastCancerWisconsin": "Diagnosis",
   "LifeExpectancy": null,
@@ -7,5 +7,13 @@
   "bankruptcy": null,
   "Ailerons": null,
   "spambase": null,
-  "mice": null
+  "mice": null,
+  "Facebook": null,
+  "Job": null,
+  "KDD": null,
+  "thyroid_ann": null,
+  "ibm": null,
+  "hill_valley": null,
+  "madeline": null,
+  "pol_reg": null
 }

@@ -1,0 +1,33 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 461, in <module>
+    run_experiment(
+    ~~~~~~~~~~~~~~^
+        data_type=args.data_type,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<11 lines>...
+        seed=args.seed
+        ^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 133, in run_experiment
+    df = load_data(outdir, data_name=data_name, target_column=target_col, drop_columns=None)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/data.py", line 29, in load_data
+    raise FileNotFoundError(f"{data_name} dataset not found at {data_path}")
+FileNotFoundError: ibm dataset not found at /mnt/nfs/work1/sheldon/cferrando/private-ggm/data/ibm.csv
+================================================================================
+ANNEALING ITERATIVE PRIVATE GGM EXPERIMENTS
+================================================================================
+Data type: real
+Dataset: ibm
+Rho values: [0.0001, 0.001, 0.01, 0.1, 1.0, 2.0, 10.0]
+Alpha: 0.2
+Max rounds: 200% of off-diagonal entries
+Trials: 10
+Sensitivity type: linf
+Allow remeasurement: True
+PGD max iterations: 5000
+Seed: 42
+================================================================================
+Warning: No target column specified for ibm

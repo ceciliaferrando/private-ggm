@@ -1,0 +1,37 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 461, in <module>
+    run_experiment(
+    ~~~~~~~~~~~~~~^
+        data_type=args.data_type,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<11 lines>...
+        seed=args.seed
+        ^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 132, in run_experiment
+    df = load_data(outdir, data_name=data_name, target_column=target_col, drop_columns=None)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/data.py", line 42, in load_data
+    first_line = f.readline().strip()
+                 ~~~~~~~~~~^^
+  File "<frozen codecs>", line 325, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xb0 in position 35: invalid start byte
+================================================================================
+ANNEALING ITERATIVE PRIVATE GGM EXPERIMENTS
+================================================================================
+Data type: real
+Dataset: SeoulBikeData
+Rho values: [0.0001, 0.001, 0.01, 0.1, 1.0, 2.0, 10.0]
+Alpha: 0.2
+Max rounds: 200% of off-diagonal entries
+Trials: 10
+Sensitivity type: linf
+Allow remeasurement: True
+Optimizer: pgd_maxent_solver
+Seed: 42
+================================================================================
+Loading SeoulBikeData to determine dimension...
+Target column for SeoulBikeData: Rented Bike Count
+Seoul Bike experiment completed!

@@ -76,6 +76,16 @@ def SSP_covariance(cov_matrix, cov_sensitivity, rho, rng=None, ssp_seed=1):
     return cov_dp, noise_scale
 
 
+def SSP_gradient(Xy_vector, gradient_sensitivity, rho, rng=None):
+    """
+    Apply SSP to X^T y (gradient vector)
+    """
+    noise_scale = gradient_sensitivity / np.sqrt(2 * rho)
+    noise = rng.normal(0, noise_scale, len(Xy_vector))
+    Xy_dp = Xy_vector + noise
+    return Xy_dp, noise_scale
+
+
 def gaussian_mechanism(rng, obj, sensitivity, rho):
     """
     Apply the Gaussian mechanism to a function output under zCDP.

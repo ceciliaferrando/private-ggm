@@ -1,0 +1,5 @@
+======================================
+Running: thyroid_ann (goldstandard)
+Array task: 3
+======================================
+slurmstepd-swarm072: error: *** JOB 28629593 ON swarm072 CANCELLED AT 2026-03-29T17:42:31 ***

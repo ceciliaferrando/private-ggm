@@ -1,0 +1,97 @@
+======================================
+Running: BreastCancerWisconsin (ipm_solver)
+Array task: 5
+======================================
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 461, in <module>
+    run_experiment(
+    ~~~~~~~~~~~~~~^
+        data_type=args.data_type,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<11 lines>...
+        seed=args.seed
+        ^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 155, in run_experiment
+    bounds_path = compute_and_save_bounds(df, outdir, rescale=True)
+  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/privateggm/data.py", line 181, in compute_and_save_bounds
+    bounds = json.load(f)
+  File "/mnt/nfs/work1/sheldon/cferrando/conda_env/lib/python3.13/json/__init__.py", line 298, in load
+    return loads(fp.read(),
+        cls=cls, object_hook=object_hook,
+        parse_float=parse_float, parse_int=parse_int,
+        parse_constant=parse_constant, object_pairs_hook=object_pairs_hook, **kw)
+  File "/mnt/nfs/work1/sheldon/cferrando/conda_env/lib/python3.13/json/__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/conda_env/lib/python3.13/json/decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/nfs/work1/sheldon/cferrando/conda_env/lib/python3.13/json/decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+================================================================================
+ANNEALING ITERATIVE PRIVATE GGM EXPERIMENTS
+================================================================================
+Data type: real
+Dataset: BreastCancerWisconsin
+Rho values: [0.0001, 0.001, 0.01, 0.1, 1.0, 2.0, 10.0]
+Alpha: 0.2
+Max rounds: 200% of off-diagonal entries
+Trials: 10
+Sensitivity type: linf
+Allow remeasurement: True
+Optimizer: ipm_chol
+Seed: 42
+================================================================================
+Loading BreastCancerWisconsin to determine dimension...
+Target column for BreastCancerWisconsin: Diagnosis
+Loaded BreastCancerWisconsin: 569 rows × 32 columns
+Dropping target column: 'Diagnosis'
+  Shape before: (569, 32), after: (569, 31)
+Final dataset: 569 rows × 31 columns
+Columns: ['Unnamed: 0', 'radius1', 'texture1', 'perimeter1', 'area1', 'smoothness1', 'compactness1', 'concavity1', 'concave_points1', 'symmetry1', 'fractal_dimension1', 'radius2', 'texture2', 'perimeter2', 'area2', 'smoothness2', 'compactness2', 'concavity2', 'concave_points2', 'symmetry2', 'fractal_dimension2', 'radius3', 'texture3', 'perimeter3', 'area3', 'smoothness3', 'compactness3', 'concavity3', 'concave_points3', 'symmetry3', 'fractal_dimension3']
+Loaded BreastCancerWisconsin: 569 rows × 31 columns
+Columns: ['Unnamed: 0', 'radius1', 'texture1', 'perimeter1', 'area1', 'smoothness1', 'compactness1', 'concavity1', 'concave_points1', 'symmetry1', 'fractal_dimension1', 'radius2', 'texture2', 'perimeter2', 'area2', 'smoothness2', 'compactness2', 'concavity2', 'concave_points2', 'symmetry2', 'fractal_dimension2', 'radius3', 'texture3', 'perimeter3', 'area3', 'smoothness3', 'compactness3', 'concavity3', 'concave_points3', 'symmetry3', 'fractal_dimension3']
+Original data shape: (569, 31)
+Missing values per column:
+Unnamed: 0            0
+radius1               0
+texture1              0
+perimeter1            0
+area1                 0
+smoothness1           0
+compactness1          0
+concavity1            0
+concave_points1       0
+symmetry1             0
+fractal_dimension1    0
+radius2               0
+texture2              0
+perimeter2            0
+area2                 0
+smoothness2           0
+compactness2          0
+concavity2            0
+concave_points2       0
+symmetry2             0
+fractal_dimension2    0
+radius3               0
+texture3              0
+perimeter3            0
+area3                 0
+smoothness3           0
+compactness3          0
+concavity3            0
+concave_points3       0
+symmetry3             0
+fractal_dimension3    0
+dtype: int64
+Data shape after dropping NaNs: (569, 31)
+   Using analytical bounds after rescaling: L2=5.568, Linf=1
+======================================
+Completed: BreastCancerWisconsin
+======================================

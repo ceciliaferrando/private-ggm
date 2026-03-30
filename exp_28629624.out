@@ -1,0 +1,5 @@
+======================================
+Running: spambase (pgd_maxent_solver)
+Array task: 7
+======================================
+slurmstepd-swarm069: error: *** JOB 28629624 ON swarm069 CANCELLED AT 2026-03-29T17:42:31 ***
