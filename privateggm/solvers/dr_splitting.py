@@ -19,7 +19,10 @@ Y. Sun, L. Vandenberghe, "Decomposition methods for sparse matrix nearness
 problems", SIAM J. Matrix Anal. Appl., 36(4), 2015.
 """
 
+import functools
+import itertools
 import time
+from dataclasses import dataclass
 
 import networkx as nx
 import numpy as np
@@ -27,48 +30,13 @@ import numpy as np
 from ._shared import _weights, project_psd
 
 
-# ── Chordal completion (pluggable backend) ────────────────────────────────────
-
-def chordal_completion_nx(inds, d):
-    """Chordal completion and clique enumeration via networkx.
-
-    Parameters
-    ----------
-    inds : (m, 2) int array — observed index pairs (including diagonal)
-    d    : int — matrix dimension
-
-    Returns
-    -------
-    edges = (rows, cols) 
-        rows : (n,) int array — row indices of chordal pattern (row <= col)
-        cols : (n,) int array — col indices of chordal pattern
-    cliques   : list of sorted int arrays — maximal cliques β_k of the chordal graph
-    """
-    obs_rows, obs_cols = inds[:, 0], inds[:, 1]
-
-    G = nx.Graph()
-    G.add_nodes_from(range(d))
-    for i, j in zip(obs_rows, obs_cols):
-        if i != j:
-            G.add_edge(i, j)
-
-    H, _ = nx.complete_to_chordal_graph(G)
-    cliques = [np.array(sorted(c), dtype=int) for c in nx.chordal_graph_cliques(H)]
-
-    # upper-tri entries (row <= col), including diagonal — matches inds convention
-    entries = set((i, i) for i in range(d))
-    for i, j in H.edges():
-        entries.add((min(i, j), max(i, j)))
-    entries = sorted(entries)
-    rows = np.array([r for r, c in entries], dtype=int)
-    cols = np.array([c for r, c in entries], dtype=int)
-
-    return (rows, cols), cliques
-
-
 # ── vec / unvec ───────────────────────────────────────────────────────────────
 
 _SQRT2 = np.sqrt(2)
+
+@functools.lru_cache(maxsize=None)
+def _triu_rc(s):
+    return np.triu_indices(s)
 
 
 def vec(Y, rows=None, cols=None):
@@ -76,14 +44,11 @@ def vec(Y, rows=None, cols=None):
 
     Off-diagonal entries are multiplied by √2 so that ‖vec(Y)‖² = ‖Y‖_F².
 
-    vec(Y)             — dense: all upper-tri entries of s×s matrix Y
+    vec(Y)             — dense: all upper-tri entries of sxs matrix Y
     vec(Y, rows, cols) — sparse: entries Y[rows, cols]
     """
-    if rows is None:
-        r, c = np.triu_indices(Y.shape[0])
-    else:
-        r, c = rows, cols
-    v = Y[r, c].copy()
+    r, c = _triu_rc(Y.shape[0]) if rows is None else (rows, cols)
+    v = Y[r, c]
     v[r != c] *= _SQRT2
     return v
 
@@ -93,13 +58,10 @@ def unvec(v, s, rows=None, cols=None):
 
     Reverses the scaling applied by vec: off-diagonal entries are divided by √2.
 
-    unvec(v, s)             — dense: s×s matrix from upper-tri entries v
-    unvec(v, d, rows, cols) — sparse: d×d matrix, scatter v to (rows, cols)
+    unvec(v, s)             — dense: sxs matrix from upper-tri entries v
+    unvec(v, d, rows, cols) — sparse: dxd matrix, scatter v to (rows, cols)
     """
-    if rows is None:
-        r, c = np.triu_indices(s)
-    else:
-        r, c = rows, cols
+    r, c = _triu_rc(s) if rows is None else (rows, cols)
     v = v.copy()
     v[r != c] /= _SQRT2
     Y = np.zeros((s, s))
@@ -108,158 +70,400 @@ def unvec(v, s, rows=None, cols=None):
     return Y
 
 
-# ── Junction tree / separators ────────────────────────────────────────────────
+# ── Junction tree ─────────────────────────────────────────────────────────────
 
-def _build_separators(cliques):
-    """Build the junction tree and extract separator information.
+@dataclass
+class JunctionTree:
+    """Junction tree of a chordal graph.
+
+    Cliques are stored in BFS traversal order from the root (cliques[0]).
+    This guarantees parents[j] < j for all j > 0, so a root-to-leaves pass
+    is forward iteration and a leaves-to-root pass is reverse iteration.
+
+    Fields
+    ------
+    cliques : list of sorted int arrays — maximal cliques, traversal order
+    parents : list — parents[0] = None; parents[j] = int index for j > 0
+    seps    : list of int arrays — seps[j] = global node indices of separator
+              between cliques[j] and its parent; seps[0] = empty array
+    edges   : (rows, cols) — upper-tri entries of the chordal extension
+    """
+    cliques : list
+    parents : list
+    seps    : list
+    edges   : tuple
+
+    @property
+    def clique_sizes(self):
+        return [len(c) for c in self.cliques]
+
+
+def get_elim_order_cholmod(rows, cols, d):
+    """Fill-reducing elimination ordering via CHOLMOD AMD (symbolic analysis only).
 
     Parameters
     ----------
-    cliques : list of sorted int arrays — maximal cliques
+    rows, cols : (m,) int arrays — observed index pairs
+    d          : int — matrix dimension
 
     Returns
     -------
-    sep_parent     : list of int — for each separator, which clique to extract it from
-    sep_local_inds : list of int arrays — local row/col indices of the separator
-                     within the parent clique (for use with np.ix_)
+    elim_order : (d,) int array — elim_order[step] = variable eliminated at that step
     """
-    K = len(cliques)
-    if K <= 1:
-        return [], []
+    import scipy.sparse as sp
+    from sksparse.amd import amd
 
-    # Weighted clique-intersection graph; max spanning tree = junction tree
+    off = rows != cols
+    r, c = rows[off].astype(int), cols[off].astype(int)
+    A = sp.csc_matrix((np.ones(len(r), dtype=np.int8), (r, c)), shape=(d, d))
+    return amd(A).astype(int)
+
+
+def get_elim_order_nx(rows, cols, d):
+    """Perfect elimination ordering via networkx MCS-M triangulation.
+
+    Parameters
+    ----------
+    rows, cols : (m,) int arrays — observed index pairs
+    d          : int — matrix dimension
+
+    Returns
+    -------
+    elim_order : (d,) int array — elim_order[step] = variable eliminated at that step
+    """
+    G = nx.Graph()
+    G.add_nodes_from(range(d))
+    for r, c in zip(rows, cols):
+        if r != c:
+            G.add_edge(int(r), int(c))
+    _, alpha = nx.complete_to_chordal_graph(G)
+    # alpha[v] = position of v in the ordering (0 = eliminated first)
+    return np.array(sorted(range(d), key=lambda v: alpha[v]), dtype=int)
+
+
+def triangulate(rows, cols, d, elim_order):
+    """Triangulate a graph by simulating variable elimination.
+
+    Adds fill edges to make the graph chordal under the given ordering.
+
+    Parameters
+    ----------
+    rows, cols : (m,) int arrays — observed index pairs
+    d          : int — matrix dimension
+    elim_order : (d,) int array — variable elimination order
+
+    Returns
+    -------
+    H : nx.Graph — chordal graph (original edges + fill-in)
+    """
+    H = nx.Graph()
+    H.add_nodes_from(range(d))
+    H.add_edges_from((int(r), int(c)) for r, c in zip(rows, cols) if r != c)
+
+    eliminated = np.zeros(d, dtype=bool)
+    for v in elim_order:
+        v = int(v)
+        neighbors = [u for u in H.neighbors(v) if not eliminated[u]]
+        for u, w in itertools.combinations(neighbors, 2):
+            if not H.has_edge(u, w):
+                H.add_edge(u, w)
+        eliminated[v] = True
+
+    return H
+
+
+def build_jtree(rows, cols, d, elim_order=None):
+    """Build a JunctionTree from a sparsity pattern.
+
+    Triangulates the graph under the given elimination ordering, finds maximal
+    cliques, and builds the junction tree via maximum spanning tree.
+
+    Parameters
+    ----------
+    rows, cols : (m,) int arrays — observed index pairs
+    d          : int — matrix dimension
+    elim_order : (d,) int array — elimination ordering; default is CHOLMOD AMD
+
+    Returns
+    -------
+    JunctionTree
+    """
+    if elim_order is None:
+        elim_order = get_elim_order_cholmod(rows, cols, d)
+
+    H       = triangulate(rows, cols, d, elim_order)
+    cliques = [np.array(sorted(c), dtype=int) for c in nx.find_cliques(H)]
+    K       = len(cliques)
+
+    # Chordal extension edges: diagonal + upper-tri of H
+    H.add_edges_from((i, i) for i in range(d))
+    pairs = sorted((min(u,v), max(u,v)) for u, v in H.edges())
+    rows, cols = zip(*pairs)
+    edges = (np.array(rows, dtype=int), np.array(cols, dtype=int))
+
+    if K == 1:
+        return JunctionTree(
+            cliques = cliques,
+            parents = [None],
+            seps    = [np.array([], dtype=int)],
+            edges   = edges,
+        )
+
+    # Junction tree via maximum spanning tree of clique-intersection graph.
+    # All K nodes are added explicitly so isolated cliques (variables with no
+    # off-diagonal observations) are still included in the spanning tree.
     CG = nx.Graph()
+    CG.add_nodes_from(range(K))
     for i in range(K):
         for j in range(i + 1, K):
             sep = np.intersect1d(cliques[i], cliques[j])
             if len(sep) > 0:
                 CG.add_edge(i, j, weight=len(sep))
+    # Connect any component not containing node 0 so the spanning tree covers all K cliques.
+    # This handles variables with no off-diagonal observations (singleton cliques).
+    for component in nx.connected_components(CG):
+        if 0 not in component:
+            CG.add_edge(0, min(component), weight=0)
 
-    sep_parent, sep_local_inds = [], []
-    for i, j in nx.maximum_spanning_tree(CG).edges():
-        sep = np.intersect1d(cliques[i], cliques[j])
-        sep_parent.append(i)
-        sep_local_inds.append(np.searchsorted(cliques[i], sep))
+    # Get BFS tree and reorder cliques in tree order
+    T    = nx.bfs_tree(nx.maximum_spanning_tree(CG), 0)
+    topo = list(nx.topological_sort(T))
+    rank = {v: i for i, v in enumerate(topo)}
 
-    return sep_parent, sep_local_inds
+    cliques = [cliques[v] for v in topo]
+    T       = nx.relabel_nodes(T, rank)   # now T's nodes are 0..K-1 in topo order
+
+    parents = [None] * K
+    seps    = [np.array([], dtype=int)] * K
+    for j in range(1, K):
+        parents[j] = next(T.predecessors(j))  # guaranteed < j by topo order
+        seps[j]    = np.intersect1d(cliques[j], cliques[parents[j]])
+
+    return JunctionTree(
+        cliques = cliques,
+        parents = parents,
+        seps    = seps,
+        edges   = edges,
+    )
 
 
 # ── Entropy ───────────────────────────────────────────────────────────────────
 
-def clique_entropy(y, sep_parent, sep_local_inds, evals=None):
-    """Entropy (log det) of the max-entropy completion via the junction tree formula:
+def unpack_y(y_flat, y_slices, clique_sizes):
+    """Unpack flat y vector into a list of clique matrices."""
+    return [unvec(y_flat[sl], s) for sl, s in zip(y_slices, clique_sizes)]
 
-        log det X = Σ_k log det X_{β_k} - Σ_s log det X_{S_s}
+
+def log_det(jtree, y_mats):
+    """Log-determinant of the max-entropy completion via the junction tree formula:
+
+        log det X = Σ_j log det X_{β_j} - Σ_j log det X_{S_j}
+
+    The j=0 separator is empty so its term vanishes.
 
     Parameters
     ----------
-    y              : list of (s_k, s_k) clique submatrices
-    sep_parent     : list of parent clique indices (from _build_separators)
-    sep_local_inds : list of local index arrays into parent clique
-    evals          : optional list of eigenvalue arrays for each y[k], e.g. from
-                     project_psd(..., return_evals=True); avoids re-eigendecomposing
+    jtree  : JunctionTree
+    y_mats : list of (s_k, s_k) symmetric matrices, one per clique
     """
     ent = 0.0
-    for k, Y_k in enumerate(y):
-        ev = evals[k] if evals is not None else np.linalg.eigvalsh(Y_k)
-        ent += np.sum(np.log(np.maximum(ev, 1e-10)))
-    for parent, local in zip(sep_parent, sep_local_inds):
-        S = y[parent][np.ix_(local, local)]
-        ent -= np.sum(np.log(np.maximum(np.linalg.eigvalsh(S), 1e-10)))
+    for j, Y_k in enumerate(y_mats):
+        ent += np.sum(np.log(np.maximum(np.linalg.eigvalsh(Y_k), 1e-10)))
+        sep = jtree.seps[j]
+        if len(sep) > 0:
+            parent = jtree.parents[j]
+            local  = np.searchsorted(jtree.cliques[parent], sep)
+            S      = y_mats[parent][np.ix_(local, local)]
+            ent   -= np.sum(np.log(np.maximum(np.linalg.eigvalsh(S), 1e-10)))
     return float(ent)
 
 
-# ── Index geometry ────────────────────────────────────────────────────────────
+# ── Solver geometry ───────────────────────────────────────────────────────────
 
-def build_geometry(inds, tau, d, chordal_fn=None):
-    """Precompute all index structures for D-R splitting.
+def build_geometry(jtree, rows, cols, tau):
+    """Precompute DR-solver index structures from a JunctionTree.
 
     Parameters
     ----------
-    inds       : (m, 2) int array — observed index pairs
+    jtree      : JunctionTree
+    rows, cols : (m,) int arrays — observed index pairs
     tau        : (m,) float array — noise std-devs
-    d          : int — matrix dimension
-    chordal_fn : callable(inds, d) -> ((rows, cols), cliques),
-                 default chordal_completion_nx
 
     Returns
     -------
-    geom : dict with fields:
-
-        edges = (rows, cols) 
-            rows : (n,) int array — row indices of chordal pattern (row <= col)
-            cols : (n,) int array — col indices of chordal pattern
-        cliques     list of sorted int arrays — maximal cliques β_k
-        n           int — number of entries in x
-        obs_inds    (m,) int — positions in x of observed entries
-        clique_inds    list of (n_k,) int arrays — positions in x of upper-tri
-                           entries of clique k, in triu row-major order
-        n_covers       (n,) int — number of cliques covering each entry of x
-        sep_parent     list of int — parent clique index for each junction-tree separator
-        sep_local_inds list of int arrays — local row/col indices of separator within
-                           parent clique (for use with np.ix_)
-        w              (m,) float — normalized objective weights 1/τ²
+    dict with fields:
+        n             int — number of entries in x (len of chordal edge list)
+        obs_inds      (m,) int — positions in x of observed entries
+        clique_inds   list of (n_k,) int — positions in x of upper-tri entries of clique k
+        n_covers      (n,) int — number of cliques covering each entry of x
+        ny            int — total length of flat y (Σ_k s_k*(s_k+1)/2)
+        y_slices      list of slice — slice into flat y for each clique
+        y_gather_inds (ny,) int — x[y_gather_inds] gathers all clique entries into flat y
+        w             (m,) float — normalized objective weights 1/τ²
     """
-    if chordal_fn is None:
-        chordal_fn = chordal_completion_nx
+    edge_rows, edge_cols = jtree.edges
+    cliques              = jtree.cliques
+    n                    = len(edge_rows)
 
-    # Normalize to row <= col once at the boundary
-    obs_rows = np.minimum(inds[:, 0], inds[:, 1])
-    obs_cols = np.maximum(inds[:, 0], inds[:, 1])
+    obs_rows = np.minimum(rows, cols)
+    obs_cols = np.maximum(rows, cols)
 
-    edges, cliques = chordal_fn(inds, d)
-    (rows, cols) = edges
-    n = len(rows)
+    edge2ind = {(r, c): i for i, (r, c) in enumerate(zip(edge_rows, edge_cols))}
 
-    # Mapping from (r,c) to index in edge list
-    edge2ind = {(r, c): i for i, (r, c) in enumerate(zip(rows, cols))}
-
-    # Check that all diagonal entries are present (required for PSD-completable projection)
-    for i in range(d):
+    for i in range(edge_rows.max() + 1):
         if (i, i) not in edge2ind:
             raise ValueError(f"Missing diagonal entry ({i}, {i}) in chordal pattern")
 
-    # Positions in edge list of observed entries
     obs_inds = np.array([edge2ind[e] for e in zip(obs_rows, obs_cols)], dtype=int)
 
-    # For each clique β_k, clique_inds[k] maps its triu entries to positions in x
     clique_inds = []
     for beta in cliques:
         s = len(beta)
         r, c = np.triu_indices(s)
         clique_edges = [(beta[r[i]], beta[c[i]]) for i in range(len(r))]
-        clique_inds.append(np.array([edge2ind[edge] for edge in clique_edges], dtype=int))
+        clique_inds.append(np.array([edge2ind[e] for e in clique_edges], dtype=int))
 
-    # Number of cliques covering each entry of x (always >= 1 for chordal graphs)
     n_covers = np.zeros(n, dtype=int)
     for cidx in clique_inds:
         n_covers[cidx] += 1
 
-    sep_parent, sep_local_inds = _build_separators(cliques)
+    y_slices = []
+    offset   = 0
+    for s in jtree.clique_sizes:
+        nvec = s * (s + 1) // 2
+        y_slices.append(slice(offset, offset + nvec))
+        offset += nvec
+    ny = offset
+    y_gather_inds = np.concatenate(clique_inds)
 
     return dict(
-        edges=(rows, cols),
-        cliques=cliques,
-        n=n,
-        obs_inds=obs_inds,
-        clique_inds=clique_inds,
-        n_covers=n_covers,
-        sep_parent=sep_parent,
-        sep_local_inds=sep_local_inds,
-        w=_weights(tau),
+        n             = n,
+        obs_inds      = obs_inds,
+        clique_inds   = clique_inds,
+        n_covers      = n_covers,
+        ny            = ny,
+        y_slices      = y_slices,
+        y_gather_inds = y_gather_inds,
+        w             = _weights(tau),
     )
 
 
+# ── Reconstruction ────────────────────────────────────────────────────────────
+
+def maxent_completion(jtree, clique_mats):
+    """Reconstruct the full d×d covariance from clique marginals via junction tree.
+
+    Root-to-leaves pass using the conditional distribution of each clique given
+    its separator.  When clique_mats are consistent and PD this recovers the
+    max-entropy completion; otherwise returns a valid PSD matrix built from the
+    conditional distributions implied by each clique.
+
+    Parameters
+    ----------
+    jtree      : JunctionTree
+    clique_mats: list of (s_k, s_k) symmetric PSD arrays, one per clique,
+                 in the same order as jtree.cliques
+
+    Returns
+    -------
+    Sigma : (d, d) ndarray — always PSD; PD when all clique_mats are PD
+    """
+    cliques = jtree.cliques
+    parents = jtree.parents
+    seps    = jtree.seps
+    K       = len(cliques)
+    d       = max(c.max() for c in cliques) + 1
+
+    Sigma = np.zeros((d, d))
+    b0    = cliques[0]
+    Sigma[np.ix_(b0, b0)] = clique_mats[0]
+
+    for ell in range(1, K):
+        beta_l = cliques[ell]
+        S      = seps[ell]
+        X      = clique_mats[ell]
+
+        if len(S) == 0:
+            # Disconnected component: independent of everything seen so far
+            Sigma[np.ix_(beta_l, beta_l)] = X
+            continue
+
+        # Local indices of S and R = beta_l \ S within beta_l
+        s_loc  = np.searchsorted(beta_l, S)
+        r_mask = np.ones(len(beta_l), dtype=bool)
+        r_mask[s_loc] = False
+        r_loc  = np.where(r_mask)[0]
+        R      = beta_l[r_loc]                       # global indices of residual
+
+        # Conditional distribution of x_R | x_S derived from X
+        X_SS = X[np.ix_(s_loc, s_loc)]
+        X_RS = X[np.ix_(r_loc, s_loc)]
+        X_RR = X[np.ix_(r_loc, r_loc)]
+        A    = X_RS @ np.linalg.pinv(X_SS)           # |R| × |S| regression coefs
+        C    = X_RR - A @ X_SS @ A.T                 # |R| × |R| conditional cov, PSD
+
+        # Cross-blocks: Sigma[beta_j, R] = Sigma[beta_j, S] @ A.T  for all j < ell
+        for j in range(ell):
+            bj       = cliques[j]
+            Sigma_jS = Sigma[np.ix_(bj, S)]
+            Sigma_jR = Sigma_jS @ A.T
+            Sigma[np.ix_(bj, R)] = Sigma_jR
+            Sigma[np.ix_(R, bj)] = Sigma_jR.T
+
+        # Diagonal block: S part already in matrix from parent; fill R rows/cols
+        Sigma_SS = Sigma[np.ix_(S, S)]
+        Sigma_RS = A @ Sigma_SS
+        Sigma_RR = C + A @ Sigma_SS @ A.T
+
+        Sigma[np.ix_(R, S)] = Sigma_RS
+        Sigma[np.ix_(S, R)] = Sigma_RS.T
+        Sigma[np.ix_(R, R)] = Sigma_RR
+
+    return Sigma
+
+
+def maxent_completion_dense(jtree, clique_mats):
+    """Dense reference implementation of maxent_completion.
+
+    Assembles the precision matrix K via the junction tree formula
+    K = Σ_k K_k - Σ_k K_{S_k}, then inverts.  Requires consistent PD clique
+    marginals.  Useful for testing against maxent_completion.
+
+    Parameters
+    ----------
+    jtree      : JunctionTree
+    clique_mats: list of (s_k, s_k) symmetric PD arrays, one per clique
+
+    Returns
+    -------
+    Sigma : (d, d) ndarray
+    """
+    cliques = jtree.cliques
+    parents = jtree.parents
+    seps    = jtree.seps
+    d       = max(c.max() for c in cliques) + 1
+
+    K = np.zeros((d, d))
+    for ell, X in enumerate(clique_mats):
+        b = cliques[ell]
+        K[np.ix_(b, b)] += np.linalg.inv(X)
+        S = seps[ell]
+        if len(S) > 0:
+            pa      = parents[ell]
+            s_in_pa = np.searchsorted(cliques[pa], S)
+            X_SS    = clique_mats[pa][np.ix_(s_in_pa, s_in_pa)]
+            K[np.ix_(S, S)] -= np.linalg.inv(X_SS)
+
+    return np.linalg.inv(K)
+
+
 # ── Solver ────────────────────────────────────────────────────────────────────
-def _objective(x, w, a, obs_inds):
-    """Objective function f(x) = Σ_{i∈obs_inds} w_i (x_i - a_i)²."""
-    r = x[obs_inds] - a
-    return float(np.sum(w * r ** 2))
 
 def dr_splitting(A, inds, tau,
                  gamma=1.0, rho=1.0,
-                 max_iters=2000, eps_abs=1e-5,
-                 chordal_fn=None):
+                 max_iters=5000, eps_abs=1e-5,
+                 diag_every=25,
+                 elim_order=None):
     """Douglas-Rachford splitting for the sparse PSD-nearness problem.
 
     Parameters
@@ -270,105 +474,130 @@ def dr_splitting(A, inds, tau,
     gamma      : float — proximal step size (> 0)
     rho        : float — D-R relaxation parameter (0 < rho < 2)
     max_iters  : int — maximum iterations
-    eps_abs    : float — absolute convergence tolerance on primal residual
-    chordal_fn : callable(inds, d) -> (edges, cliques), default chordal_completion_nx
+    eps_abs    : float — convergence tolerance on normalized primal/dual residuals
+    diag_every : int — compute and record diagnostics every this many iterations
+    elim_order : (d,) int array — elimination ordering; default is CHOLMOD AMD
 
     Returns
     -------
-    Sigma_hat : (d, d) ndarray — estimated covariance (sparse, zeros off E')
+    Sigma_hat : (d, d) ndarray — estimated covariance (max-entropy completion)
     hist      : list of per-iteration dicts with keys:
-                    time, obj, r_primal, r_dual
+                    time, obj, entropy, r_primal, r_dual
     """
-    d = A.shape[0]
-    geom = build_geometry(inds, tau, d, chordal_fn)
-
-    (rows, cols) = geom['edges']
-    cliques      = geom['cliques']
-    n            = geom['n']
-    obs_inds     = geom['obs_inds']
-    clique_inds    = geom['clique_inds']
-    n_covers       = geom['n_covers']
-    sep_parent     = geom['sep_parent']
-    sep_local_inds = geom['sep_local_inds']
-    w              = geom['w']
-    n_cliques    = len(cliques)
-
+    d              = A.shape[0]
     obs_rows, obs_cols = inds[:, 0], inds[:, 1]
+    jtree = build_jtree(obs_rows, obs_cols, d, elim_order)
+    geom  = build_geometry(jtree, obs_rows, obs_cols, tau)
 
-    # This function uses the convention that vectorization scales off-diagonal entries by 
-    # √2, so ‖vec(Y)‖² = ‖Y‖_F². To preserve the objective sum(w * x([obs_inds] - a)²) we 
-    # need to scale w by 1/2 for off-diagonal entries. 
-    a = vec(A, obs_rows, obs_cols)  # observed entries (√2-scaled off-diag)
-    w = w.copy()                    # internal weights for prox step
-    w[obs_rows != obs_cols] /= 2.0  # adjust for √2 scaling: off-diag counted once not twice
+    cliques        = jtree.cliques
+    clique_sizes   = jtree.clique_sizes
+    n_cliques      = len(cliques)
+
+    n             = geom['n']
+    obs_inds      = geom['obs_inds']
+    clique_inds   = geom['clique_inds']
+    n_covers      = geom['n_covers']
+    y_slices      = geom['y_slices']
+    y_gather_inds = geom['y_gather_inds']
+    w             = geom['w']
+
+    # vec scales off-diagonal entries by √2 (so ‖vec(Y)‖² = ‖Y‖_F²).  Halving w
+    # for off-diagonal entries compensates, so np.sum(w * r_vec²) == outer objective.
+    a = vec(A, obs_rows, obs_cols)
+    w = w.copy()
+    w[obs_rows != obs_cols] /= 2.0
 
     # ── Initialization ────────────────────────────────────────────────────────
-    # x stores scaled entries; initialise from scaled observations
     x = np.zeros(n)
     x[obs_inds] = a
+    y = x[y_gather_inds].copy()
 
-    # y[k]: clique submatrix of initial X
-    y = [unvec(x[clique_inds[k]], len(cliques[k]))
-         for k in range(n_cliques)]
-
-    # Dual variables (D-R running sums): u mirrors x, v[k] mirrors y[k]
     u = x.copy()
-    v = [Y_k.copy() for Y_k in y]
+    v = y.copy()
+
+    # Precompute index sets for prox_psd
+    _thresh         = 1e-8
+    size_one_inds   = np.array([y_slices[k].start for k in range(n_cliques)
+                                if clique_sizes[k] == 1], dtype=int)
+    large_clique_ks = [k for k in range(n_cliques) if clique_sizes[k] > 1]
 
     hist = []
-    t0 = time.perf_counter()
+    t0   = time.perf_counter()
 
-    for _ in range(max_iters):
+    def prox_psd(y):
+        """Project all clique submatrices of flat y onto the PSD cone."""
+        y_new = y.copy()
+        y_new[size_one_inds] = np.maximum(y[size_one_inds], _thresh)
+        for k in large_clique_ks:
+            y_new[y_slices[k]] = vec(project_psd(unvec(y[y_slices[k]], clique_sizes[k])))
+        return y_new
+
+    def project_V(x, y):
+        """Project (x, y) onto V = {(x,y) : y_k = P_{β_k} x}.
+
+        Mutates x in-place. Returns projected (x, y) where y is a new array.
+        Pass x.copy() if the original is needed afterward.
+        """
+        np.add.at(x, y_gather_inds, y)
+        x /= (1.0 + n_covers)
+        return x, x[y_gather_inds]
+
+    def norm_xy(x, y):
+        return np.hypot(np.linalg.norm(x), np.linalg.norm(y))
+
+    for it in range(max_iters):
         # ── Step 1a: prox of weighted quadratic  (x update) ──────────────────
-        # x_i = u_i                                for i ∉ obs_inds
-        # x_i = (u_i + γ w_j ã_j) / (1 + γ w_j)    for i ∈ obs_inds
         x_new = u.copy()
         x_new[obs_inds] = (u[obs_inds] + gamma * w * a) / (1.0 + gamma * w)
 
-        # ── Step 1b: prox of PSD indicator (y update) ───────────────────────
-        # return_evals=True lets clique_entropy reuse these without re-doing eigh
-        evals_new = [None] * n_cliques
-        y_new     = [None] * n_cliques
-        for k in range(n_cliques):
-            y_new[k], evals_new[k] = project_psd(v[k], return_evals=True)
+        # ── Step 1b: prox of PSD indicator (y update) ────────────────────────
+        y_new = prox_psd(v)
 
-        # ── Step 2: project (x, y) onto V = {(x,y) : y_k = P_{β_k} x} ───────
-        num = 2.0 * x_new - u
-        for k in range(n_cliques):
-            num[clique_inds[k]] += vec(2.0 * y_new[k] - v[k])
+        # ── Step 2a: reflect (x, y) across their prox mappings ───────────────
+        p = 2.0 * x_new - u
+        q = 2.0 * y_new - v
 
-        p = num / (1.0 + n_covers)
+        # ── Step 2b: project (p, q) onto V ───────────────────────────────────
+        p, q = project_V(p, q)
 
-        q = [unvec(p[clique_inds[k]], len(cliques[k]))
-             for k in range(n_cliques)]
+        # ── s = γ⁻¹(z̃ - x̃): needs old u, v before dual update ──────────────
+        do_diag = (it + 1) % diag_every == 0
+        if do_diag:
+            s_x = (u - x_new) / gamma
+            s_y = (v - y_new) / gamma
 
         # ── Step 3: dual update ───────────────────────────────────────────────
         u += rho * (p - x_new)
-        for k in range(n_cliques):
-            v[k] += rho * (q[k] - y_new[k])
-
-        # ── Convergence diagnostics ───────────────────────────────────────────
-        # Primal residual: ‖p - x_new‖  (gap between prox output and projection)
-        # Dual residual:   ‖x_new - x_prev‖ (change in prox output)
-        r_primal = float(np.linalg.norm(p - x_new))
-        r_dual   = float(np.linalg.norm(x_new - x))
-
-        obj     = float(np.sum(w * (p[obs_inds] - a) ** 2))
-        entropy = clique_entropy(y_new, sep_parent, sep_local_inds, evals=evals_new)
-
-        hist.append({
-            'time':     time.perf_counter() - t0,
-            'obj':      obj,
-            'entropy':  entropy,
-            'r_primal': r_primal,
-            'r_dual':   r_dual,
-        })
+        v += rho * (q - y_new)
 
         x = x_new
         y = y_new
 
-        if r_primal < eps_abs and r_dual < eps_abs:
-            break
+        # ── Diagnostics and convergence check ────────────────────────────────
+        if do_diag:
+            # Primal: r_p = Π_V(x̃) - x̃,  scale by max{‖x̃‖, 1}
+            x_proj, y_proj = project_V(x_new.copy(), y_new)
+            r_primal = norm_xy(x_proj - x_new, y_proj - y_new)
+            scale_p  = max(norm_xy(x_new, y_new), 1.0)
 
-    Sigma_hat = unvec(p, d, rows, cols)
+            # Dual: r_d = -Π_V(s̃),  scale by max{‖s̃‖, 1}
+            s_x_proj, s_y_proj = project_V(s_x.copy(), s_y)
+            r_dual  = norm_xy(s_x_proj, s_y_proj)
+            scale_d = max(norm_xy(s_x, s_y), 1.0)
+
+            obj     = float(np.sum(w * (p[obs_inds] - a) ** 2))
+            entropy = log_det(jtree, unpack_y(q, y_slices, clique_sizes))
+            hist.append({
+                'time':     time.perf_counter() - t0,
+                'obj':      obj,
+                'entropy':  entropy,
+                'r_primal': r_primal / scale_p,
+                'r_dual':   r_dual   / scale_d,
+            })
+
+            if (r_primal / scale_p < eps_abs) and (r_dual / scale_d < eps_abs):
+                break
+
+    clique_mats = unpack_y(y, y_slices, clique_sizes)
+    Sigma_hat   = maxent_completion(jtree, clique_mats)
     return Sigma_hat, hist
