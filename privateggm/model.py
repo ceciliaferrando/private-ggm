@@ -1039,6 +1039,9 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
         Args:
             X: Data matrix of shape (n_samples, n_features)
         """
+        import time
+        trial_start_time = time.time()
+        
         n, d = X.shape
         assert d == self.d
         
@@ -1050,6 +1053,7 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
         self.measurements = {}
         self.noise_scales = {}
         self.entry_to_rounds = {}  # Track which rounds each entry was measured in
+        self.entry_to_noise_scales = {}  # Track raw noise scale for each round of measurement
         
         # ========================================
         # 1. Measure diagonal entries
@@ -1069,6 +1073,7 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
             self.measurements[(i,i)] = self.Sigma_tilde[i,i]
             self.measured_entries.add((i,i))  # Track diagonal measurements
             self.entry_to_rounds[(i,i)] = [0]  # Round 0 for diagonal
+            self.entry_to_noise_scales[(i,i)] = [noise_scale]
         
         self.rho_used = rho_diag_init
         self.actual_diag_noise_scale = noise_scale
@@ -1186,6 +1191,7 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
                 self.noise_scales[(i,j)] = np.sqrt(updated_sigma2)
                 self.noise_scales[(j,i)] = np.sqrt(updated_sigma2)
                 self.entry_to_rounds[(i,j)].append(round_num)  # Track remeasurement
+                self.entry_to_noise_scales[(i,j)].append(new_noise_scale)  # Raw noise scale for this round
 
                 new_noise_scale = np.sqrt(updated_sigma2) # TO DO check if it needs to be the updated or raw one
 
@@ -1199,6 +1205,7 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
                 self.noise_scales[(j,i)] = new_noise_scale
                 self.measured_entries.add((i,j))
                 self.entry_to_rounds[(i,j)] = [round_num]  # Track first measurement
+                self.entry_to_noise_scales[(i,j)] = [new_noise_scale]
                 
                 print(f"First measurement ({i},{j}): empirical={empirical_cov_ij:.6f}, " +
                       f"noisy={noisy_cov:.6f}, noise_std={new_noise_scale:.6f}")
@@ -1246,6 +1253,11 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
         
         # 4. Final estimate
         self.Sigma_hat = self.get_current_estimate()
+        
+        # Record total trial time
+        trial_elapsed_time = time.time() - trial_start_time
+        self.trial_time_seconds = trial_elapsed_time
+        print(f"\n%%%%% Total trial time: {trial_elapsed_time:.2f} seconds %%%%%")
         
         return self.Sigma_hat
     

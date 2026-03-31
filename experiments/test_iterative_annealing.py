@@ -15,7 +15,7 @@ from privateggm.utils import (
     mahalanobis_cov_error,
     frobenius_error
 )
-from privateggm.privacy import SSP_covariance, cov_sensitivity_l2, cov_sensitivity_linf
+from privateggm.privacy import SSP_covariance, cov_sensitivity_l2, cov_sensitivity_linf, cov_jk_sensitivity_l2, cov_jk_sensitivity_linf, gaussian_mechanism
 
 
 def save_results(results, output_file):
@@ -186,6 +186,13 @@ def run_experiment(
     remeas_str = 'remeasure' if allow_remeasurement else 'no_remeasure'
     output_file = f'{output_dir}/annealing_privacy_analysis_{dataset_name}_d{d}_alpha{alpha}_{remeas_str}.json'
     
+    # Create output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Create covariance_matrices subdirectory for .npz files
+    matrices_dir = os.path.join(output_dir, 'covariance_matrices')
+    os.makedirs(matrices_dir, exist_ok=True)
+    
     print(f"\nData statistics:")
     print(f"X shape: {X.shape}")
     print(f"Data range: [{X.min():.3f}, {X.max():.3f}]")
@@ -217,13 +224,15 @@ def run_experiment(
         
         if rho not in results['results']:
             results['results'][rho] = []
-        
+
+        rho_covariance_matrices = {}  # accumulate covariance matrices across trials for this rho
+
         for trial in range(n_trials):
             print(f"\nTrial {trial + 1}/{n_trials}")
             
             try:
                 # Create RNG for this trial
-                trial_rng = np.random.default_rng(seed=trial * 1000 + 42)
+                trial_rng = np.random.default_rng(seed=seed * 1000 + trial)
                 
                 # Run annealing algorithm
                 print(f"Running annealing algorithm with:")
@@ -289,17 +298,33 @@ def run_experiment(
                 mah_error = mahalanobis_cov_error(Sigma_true, Sigma_est)
                 frob_error = frobenius_error(Sigma_true, Sigma_est)
                 
-                # Compute diagonal-only baseline errors
-                Sigma_baseline = model.Sigma_baseline if hasattr(model, 'Sigma_baseline') else None
-                if Sigma_baseline is not None:
-                    mah_error_baseline = mahalanobis_cov_error(Sigma_true, Sigma_baseline)
-                    frob_error_baseline = frobenius_error(Sigma_true, Sigma_baseline)
-                else:
-                    mah_error_baseline = None
-                    frob_error_baseline = None
+                # Compute TRUE diagonal-only baseline: spend ENTIRE budget on diagonal only
+                # This is a reference baseline where we measure only diagonals with full budget
+                # Use cov_jk_sensitivity for individual entry sensitivity (not full covariance)
+                diag_entry_sensitivity = cov_jk_sensitivity_l2(n, T) if sensitivity_type == 'l2' else cov_jk_sensitivity_linf(n, T)
+                Sigma_diag_baseline = np.zeros_like(Sigma_true)
+                rho_per_diag_full = rho / d  # Full budget divided equally among diagonals
+                print(f"Baseline: Spending {rho} budget on {d} diagonals = {rho_per_diag_full} per diagonal")
+                for i in range(d):
+                    noisy_diag, _, _ = gaussian_mechanism(
+                        trial_rng,
+                        Sigma_true[i, i],
+                        diag_entry_sensitivity,
+                        rho_per_diag_full
+                    )
+                    Sigma_diag_baseline[i, i] = noisy_diag
+                # Project to PSD if needed
+                from privateggm.utils import project_to_PSD
+                Sigma_diag_baseline = project_to_PSD(Sigma_diag_baseline, thresh=0)
+                
+                mah_error_baseline = mahalanobis_cov_error(Sigma_true, Sigma_diag_baseline)
+                frob_error_baseline = frobenius_error(Sigma_true, Sigma_diag_baseline)
                 
                 # Compute SSP baseline with same privacy budget
+                import time
+                ssp_start_time = time.time()
                 Sigma_SSP, ssp_noise_scale = SSP_covariance(Sigma_true, ssp_sensitivity, rho, rng=trial_rng)
+                ssp_elapsed_time = time.time() - ssp_start_time
                 mah_error_ssp = mahalanobis_cov_error(Sigma_true, Sigma_SSP)
                 frob_error_ssp = frobenius_error(Sigma_true, Sigma_SSP)
                 
@@ -309,6 +334,13 @@ def run_experiment(
                     for (i, j), rounds_list in model.entry_to_rounds.items():
                         key = f"({i},{j})"  # Convert tuple key to string
                         entry_to_rounds_serialized[key] = rounds_list
+
+                # Convert entry_to_noise_scales to JSON-serializable format
+                entry_to_noise_scales_serialized = {}
+                if hasattr(model, 'entry_to_noise_scales'):
+                    for (i, j), scales_list in model.entry_to_noise_scales.items():
+                        key = f"({i},{j})"
+                        entry_to_noise_scales_serialized[key] = [float(s) for s in scales_list]
                 
                 # Extract KKT conditions from convergence history
                 kkt_summary = {}
@@ -325,31 +357,36 @@ def run_experiment(
                                 'min_eig_grad': float(kkt['min_eig_grad'])
                             }
                 
-                # Store results
+                # Accumulate covariance matrices for this rho (saved to .npz after all trials)
+                rho_covariance_matrices[f'trial{trial}_annealing'] = Sigma_est
+                rho_covariance_matrices[f'trial{trial}_ssp'] = Sigma_SSP
+                rho_covariance_matrices[f'trial{trial}_baseline'] = Sigma_diag_baseline
+                if 'true_cov' not in rho_covariance_matrices:
+                    rho_covariance_matrices['true_cov'] = Sigma_true
+
+                # Store results (metrics only, no matrices)
                 trial_results = {
                     'annealing': {
                         'mahalanobis_error': float(mah_error),
                         'frobenius_error': float(frob_error),
-                        'estimated_cov': Sigma_est.tolist(),
                         'n_rounds': len(model.measurements),
                         'total_measurements': len(model.measurements),
                         'measurements': {f"({i},{j})": float(v) for (i, j), v in model.measurements.items()},
                         'noise_scales': {f"({i},{j})": float(v) for (i, j), v in model.noise_scales.items()},
                         'entry_to_rounds': entry_to_rounds_serialized,
-                        'kkt_conditions': kkt_summary
+                        'kkt_conditions': kkt_summary,
+                        'trial_time_seconds': float(model.trial_time_seconds) if hasattr(model, 'trial_time_seconds') else None
                     },
                     'baseline': {
-                        'mahalanobis_error': float(mah_error_baseline) if mah_error_baseline is not None else None,
-                        'frobenius_error': float(frob_error_baseline) if frob_error_baseline is not None else None,
-                        'estimated_cov': Sigma_baseline.tolist() if Sigma_baseline is not None else None
+                        'mahalanobis_error': float(mah_error_baseline),
+                        'frobenius_error': float(frob_error_baseline),
                     },
                     'ssp': {
                         'mahalanobis_error': float(mah_error_ssp),
                         'frobenius_error': float(frob_error_ssp),
-                        'estimated_cov': Sigma_SSP.tolist(),
-                        'noise_scale': float(ssp_noise_scale)
+                        'noise_scale': float(ssp_noise_scale),
+                        'trial_time_seconds': float(ssp_elapsed_time)
                     },
-                    'true_cov': Sigma_true.tolist()
                 }
                 
                 results['results'][rho].append(trial_results)
@@ -365,6 +402,7 @@ def run_experiment(
                     'allow_remeasurement': allow_remeasurement,
                     'optimizer': optimizer,
                     'entry_to_rounds': entry_to_rounds_serialized if hasattr(model, 'entry_to_rounds') else {},
+                    'entry_to_noise_scales': entry_to_noise_scales_serialized if hasattr(model, 'entry_to_noise_scales') else {},
                     'n_measured': len(measured_entries_list),
                     'n_diagonal': sum(1 for i, j in measured_entries_list if i == j),
                     'n_offdiagonal': sum(1 for i, j in measured_entries_list if i != j),
@@ -417,7 +455,13 @@ def run_experiment(
                 # Still save what we have so far
                 save_results(results, output_file)
                 continue
-    
+
+        # Save covariance matrices for this rho to .npz
+        if rho_covariance_matrices:
+            npz_path = os.path.join(matrices_dir, f'{dataset_name}_rho{rho}.npz')
+            np.savez(npz_path, **rho_covariance_matrices)
+            print(f"  → Covariance matrices saved to {npz_path}")
+
     print(f"\n{'='*80}")
     print(f"All results saved to {output_file}")
     print(f"{'='*80}")
