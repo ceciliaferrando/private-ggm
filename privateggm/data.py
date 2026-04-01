@@ -3,6 +3,7 @@ import pandas as pd
 import os
 import json
 import time
+import fcntl
 from sklearn.preprocessing import MinMaxScaler
 
 def _is_numeric_string(s):
@@ -174,28 +175,31 @@ def compute_and_save_bounds(data_df, outdir, rescale=True):
     
     
     bounds_path = os.path.join(outdir, f"L_bounds_rescale{rescale}.json")
+    lock_path = bounds_path + ".lock"
     d = data_df.shape[1]
-    
-    # Load existing bounds if file exists and is non-empty
-    bounds = {}
-    if os.path.exists(bounds_path) and os.path.getsize(bounds_path) > 0:
+
+    with open(lock_path, "w") as lock_file:
+        # Acquire exclusive lock (NFS-safe on Linux)
+        fcntl.flock(lock_file, fcntl.LOCK_EX)
         try:
-            with open(bounds_path, "r") as f:
-                bounds = json.load(f)
-        except (json.JSONDecodeError, ValueError):
-            # File corrupted or empty, start fresh
+            # Load existing bounds inside the lock
             bounds = {}
-    
-    bounds[str(d)] = {"l2": float(L2_bound), "linf": float(Linf_bound)}
-    
-    with open(bounds_path, "w") as f:
-        json.dump(bounds, f, indent=4)
-        f.flush()
-        os.fsync(f.fileno())  # Ensure write is synced to disk on NFS
-    
-    # Small delay for NFS to fully propagate changes
-    time.sleep(0.1)
-        
+            if os.path.exists(bounds_path) and os.path.getsize(bounds_path) > 0:
+                try:
+                    with open(bounds_path, "r") as f:
+                        bounds = json.load(f)
+                except (json.JSONDecodeError, ValueError):
+                    bounds = {}
+
+            bounds[str(d)] = {"l2": float(L2_bound), "linf": float(Linf_bound)}
+
+            with open(bounds_path, "w") as f:
+                json.dump(bounds, f, indent=4)
+                f.flush()
+                os.fsync(f.fileno())
+        finally:
+            fcntl.flock(lock_file, fcntl.LOCK_UN)
+
     return bounds_path
 
 def generate_well_conditioned_gaussian(rng, outdir, n_samples, d, rescale, cond_max=10.0):
