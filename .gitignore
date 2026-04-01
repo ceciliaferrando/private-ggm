@@ -42,3 +42,6 @@ data/*.csv
 data/*.json
 results/
 pathologic_sigma_tilde_dp.npy
+
+# SLURM output files
+*.out

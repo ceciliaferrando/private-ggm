@@ -1,5 +1,0 @@
-======================================
-Running: SeoulBikeData (pgd_maxent_solver)
-Array task: 1
-======================================
-slurmstepd-swarm074: error: *** JOB 28629618 ON swarm074 CANCELLED AT 2026-03-29T17:42:31 ***

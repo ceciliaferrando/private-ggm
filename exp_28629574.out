@@ -1,5 +1,0 @@
-======================================
-Running: Job (goldstandard)
-Array task: 13
-======================================
-slurmstepd-swarm074: error: *** JOB 28629574 ON swarm074 CANCELLED AT 2026-03-29T17:34:02 ***

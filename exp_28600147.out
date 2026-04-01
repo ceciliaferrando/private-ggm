@@ -1,6 +1,0 @@
-Traceback (most recent call last):
-  File "<frozen runpy>", line 198, in _run_module_as_main
-  File "<frozen runpy>", line 88, in _run_code
-  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 1, in <module>
-    import numpy as np
-ModuleNotFoundError: No module named 'numpy'

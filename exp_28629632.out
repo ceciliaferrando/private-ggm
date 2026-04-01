@@ -1,9 +1,0 @@
-======================================
-Running: BreastCancerWisconsin (pgd_maxent_solver)
-======================================
-Traceback (most recent call last):
-  File "/mnt/nfs/work1/sheldon/cferrando/private-ggm/experiments/test_iterative_annealing.py", line 273, in run_experiment
-    with open(json_path, 'w') as f:
-         ~~~~^^^^^^^^^^^^^^^^
-FileNotFoundError: [Errno 2] No such file or directory: 'results/03_29/pgd_maxent_solver/convergence_BreastCancerWisconsin_rho0.0001.json'
-slurmstepd-swarm072: error: *** JOB 28629632 ON swarm072 CANCELLED AT 2026-03-29T17:46:02 ***
