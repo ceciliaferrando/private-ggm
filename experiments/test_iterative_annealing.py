@@ -132,21 +132,14 @@ def run_experiment(
                 target_col = target_columns.get(data_name)
         
         if target_col:
-            print(f"Loading {data_name} to determine dimension...")
-            print(f"Target column for {data_name}: {target_col}")
+            print(f"Target column for {data_name}: {target_col} (will be moved to last position)")
         else:
-            print(f"Warning: No target column specified for {data_name}")
-        
-        # Load and process the data
+            print(f"No target column specified for {data_name}")
+
+        # Load and process the data — target is moved to last column, never dropped
         df = load_data(outdir, data_name=data_name, target_column=target_col, drop_columns=None)
-        
+
         print(f"Loaded {data_name}: {df.shape[0]} rows × {df.shape[1]} columns")
-        
-        if target_col and target_col in df.columns:
-            print(f"Dropping target column: {target_col}")
-            df = df.drop(columns=[target_col])
-            print(f"Final dataset: {df.shape[0]} rows × {df.shape[1]} columns")
-        
         print(f"Columns: {list(df.columns)}")
         
         # Get dimension from data
@@ -232,7 +225,7 @@ def run_experiment(
             
             try:
                 # Create RNG for this trial
-                trial_rng = np.random.default_rng(seed=seed * 1000 + trial)
+                trial_rng = np.random.default_rng(seed=seed + trial)
                 
                 # Run annealing algorithm
                 print(f"Running annealing algorithm with:")

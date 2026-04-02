@@ -16,23 +16,26 @@ def _is_numeric_string(s):
 
 def load_data(data_dir, data_name="housing", target_column=None, drop_columns=None):
     """
-    Load a dataset from a CSV file, optionally excluding a target variable and other columns.
-    Automatically handles preprocessing: keeps only numerical columns, removes rows with NaNs.
-    
+    Load a dataset from a CSV file and preprocess it.
+    The target variable (if any) is always placed as the LAST column — never dropped.
+
+    For datasets with a separate {data_name}_target.csv file, that target is attached
+    as the last column before any preprocessing.
+    For datasets where the target is already a named column, it is moved to last position.
+
     Args:
         data_dir (str): Directory containing the CSV file
         data_name (str): Name of the dataset (without .csv extension). Defaults to 'housing'.
-        target_column (str, optional): Name of the target variable column to exclude. 
-                                     For regression datasets, this column will be dropped
-                                     as we don't want it in the covariance estimation.
-        drop_columns (list, optional): List of additional column names to drop 
+        target_column (str, optional): Name of the target column already present in the CSV.
+                                     It will be moved to last position (not dropped).
+        drop_columns (list, optional): List of additional column names to drop
                                      (e.g., categorical variables, IDs, etc.)
                                      If None, all non-numerical columns are automatically dropped,
                                      along with common identifier columns (Order, PID, ID, etc.).
-        
+
     Returns:
         pd.DataFrame: The loaded dataset as a pandas DataFrame, cleaned and ready for use.
-                     Only numerical columns, no missing values, specified columns dropped.
+                     Only numerical columns, no missing values. Target is the last column.
     """
     data_path = os.path.join(data_dir, f"{data_name}.csv")
     if not os.path.exists(data_path):
@@ -75,7 +78,17 @@ def load_data(data_dir, data_name="housing", target_column=None, drop_columns=No
         raise UnicodeDecodeError(f"Could not decode {data_path} with any common encoding")
     
     print(f"Loaded {data_name}: {df.shape[0]} rows × {df.shape[1]} columns")
-    
+
+    # Attach separate target file as last column if it exists
+    target_file = os.path.join(data_dir, f"{data_name}_target.csv")
+    if os.path.exists(target_file):
+        target_series = pd.read_csv(target_file, header=None).squeeze()
+        target_series = target_series.reset_index(drop=True)
+        df = df.reset_index(drop=True)
+        df['target'] = target_series
+        target_column = 'target'
+        print(f"Attached {data_name}_target.csv as last column 'target'")
+
     # If drop_columns is None, automatically drop all non-numerical columns
     if drop_columns is None:
         # Keep only numerical columns
@@ -108,17 +121,15 @@ def load_data(data_dir, data_name="housing", target_column=None, drop_columns=No
         if columns_to_drop:
             df = df.drop(columns=columns_to_drop)
     
-    # Drop target column if specified
+    # Move target column to last position (never drop it)
     if target_column is not None:
         if target_column not in df.columns:
-            print(f"WARNING: Target column '{target_column}' not found in dataset! Already removed by auto-drop?")
+            print(f"WARNING: Target column '{target_column}' not found after preprocessing (auto-dropped as non-numeric or ID?)")
             print(f"  Available columns: {list(df.columns)}")
         else:
-            print(f"Dropping target column: '{target_column}'")
-            before_drop = df.shape
-            df = df.drop(columns=[target_column])
-            after_drop = df.shape
-            print(f"  Shape before: {before_drop}, after: {after_drop}")
+            cols = [c for c in df.columns if c != target_column] + [target_column]
+            df = df[cols]
+            print(f"Moved target column '{target_column}' to last position")
     else:
         print(f"No target column specified")
     
@@ -134,7 +145,25 @@ def load_data(data_dir, data_name="housing", target_column=None, drop_columns=No
     if constant_cols:
         print(f"Auto-dropping {len(constant_cols)} constant columns (zero variance): {constant_cols}")
         df = df.drop(columns=constant_cols)
-    
+
+    # Remove collinear columns (|r| > threshold) which cause near-singular matrices
+    collinear_threshold = 0.999
+    cols = list(df.columns)
+    cols_to_drop = set()
+    if len(cols) > 1:
+        corr_matrix = df.corr().abs()
+        for i in range(len(cols)):
+            if cols[i] in cols_to_drop:
+                continue
+            for j in range(i + 1, len(cols)):
+                if cols[j] in cols_to_drop:
+                    continue
+                if corr_matrix.loc[cols[i], cols[j]] > collinear_threshold:
+                    cols_to_drop.add(cols[j])
+    if cols_to_drop:
+        print(f"Auto-dropping {len(cols_to_drop)} collinear columns (|r| > {collinear_threshold}): {sorted(cols_to_drop)}")
+        df = df.drop(columns=list(cols_to_drop))
+
     print(f"Final dataset: {df.shape[0]} rows × {df.shape[1]} columns")
     print(f"Columns: {list(df.columns)}")
     
