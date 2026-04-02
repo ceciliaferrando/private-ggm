@@ -10,6 +10,11 @@ from privateggm.data import (
     compute_and_save_bounds,
     load_and_process_data
 )
+from privateggm.regression import (
+    prepare_regression_split,
+    extract_regression_coefficients,
+    regression_mse
+)
 from privateggm.model import AnnealingIterativePrivateGGM
 from privateggm.utils import (
     mahalanobis_cov_error,
@@ -48,7 +53,8 @@ def run_experiment(
     allow_remeasurement=True,
     output_dir='results/linesearch',
     optimizer='pgd_maxent_solver',
-    seed=42
+    seed=42,
+    regression=False
 ):
     """
     Run annealing experiments.
@@ -144,30 +150,38 @@ def run_experiment(
         
         # Get dimension from data
         d = df.shape[1]
-        
-        # Handle missing values
-        print(f"Original data shape: {df.shape}")
-        print(f"Missing values per column:\n{df.isnull().sum()}")
-        
-        # Drop rows with any missing values
-        df = df.dropna()
-        print(f"Data shape after dropping NaNs: {df.shape}")
-        
-        # Compute bounds with rescaling
-        bounds_path = compute_and_save_bounds(df, outdir, rescale=True)
-        
-        # Apply rescaling
-        from privateggm.data import rescale_data
-        df_rescaled = rescale_data(df)
-        
-        # Save rescaled data
-        data_path = os.path.join(outdir, f"{data_name}_processed.csv")
-        df_rescaled.to_csv(data_path, index=False)
-        
-        # Process the data
-        processed_data, actual_n, actual_d, Sigma_true, T = load_and_process_data(
-            data_path, bounds_path, clip_type=sensitivity_type)
-        X = processed_data.to_numpy()
+
+        if regression:
+            # Train/test split — scaler fit on train only, center using train mean
+            X, reg_data, Sigma_true, T, d, n_train = prepare_regression_split(
+                df, seed=seed, test_size=0.2)
+            print(f"Regression mode: n_train={n_train}, n_test={len(df)-n_train}, d={d}")
+        else:
+            reg_data = None
+
+            # Handle missing values
+            print(f"Original data shape: {df.shape}")
+            print(f"Missing values per column:\n{df.isnull().sum()}")
+
+            # Drop rows with any missing values
+            df = df.dropna()
+            print(f"Data shape after dropping NaNs: {df.shape}")
+
+            # Compute bounds with rescaling
+            bounds_path = compute_and_save_bounds(df, outdir, rescale=True)
+
+            # Apply rescaling
+            from privateggm.data import rescale_data
+            df_rescaled = rescale_data(df)
+
+            # Save rescaled data
+            data_path = os.path.join(outdir, f"{data_name}_processed.csv")
+            df_rescaled.to_csv(data_path, index=False)
+
+            # Process the data
+            processed_data, actual_n, actual_d, Sigma_true, T = load_and_process_data(
+                data_path, bounds_path, clip_type=sensitivity_type)
+            X = processed_data.to_numpy()
     
     # Update results parameters with actual values
     results['parameters']['d'] = d
@@ -357,6 +371,24 @@ def run_experiment(
                 if 'true_cov' not in rho_covariance_matrices:
                     rho_covariance_matrices['true_cov'] = Sigma_true
 
+                # Regression evaluation (if enabled)
+                reg_results_annealing = {}
+                reg_results_ssp = {}
+                if regression and reg_data is not None:
+                    beta_pace = extract_regression_coefficients(Sigma_est, d)
+                    mse_pace  = regression_mse(reg_data['X_test_feat'], reg_data['y_test'], beta_pace)
+                    reg_results_annealing = {
+                        'beta': beta_pace.tolist(),
+                        'mse': mse_pace,
+                    }
+                    beta_ssp_ = extract_regression_coefficients(Sigma_SSP, d)
+                    mse_ssp_  = regression_mse(reg_data['X_test_feat'], reg_data['y_test'], beta_ssp_)
+                    reg_results_ssp = {
+                        'beta': beta_ssp_.tolist(),
+                        'mse': mse_ssp_,
+                    }
+                    print(f"  Regression MSE — PACE-GGM: {mse_pace:.6f}  SSP: {mse_ssp_:.6f}")
+
                 # Store results (metrics only, no matrices)
                 trial_results = {
                     'annealing': {
@@ -368,7 +400,8 @@ def run_experiment(
                         'noise_scales': {f"({i},{j})": float(v) for (i, j), v in model.noise_scales.items()},
                         'entry_to_rounds': entry_to_rounds_serialized,
                         'kkt_conditions': kkt_summary,
-                        'trial_time_seconds': float(model.trial_time_seconds) if hasattr(model, 'trial_time_seconds') else None
+                        'trial_time_seconds': float(model.trial_time_seconds) if hasattr(model, 'trial_time_seconds') else None,
+                        **reg_results_annealing,
                     },
                     'baseline': {
                         'mahalanobis_error': float(mah_error_baseline),
@@ -378,7 +411,8 @@ def run_experiment(
                         'mahalanobis_error': float(mah_error_ssp),
                         'frobenius_error': float(frob_error_ssp),
                         'noise_scale': float(ssp_noise_scale),
-                        'trial_time_seconds': float(ssp_elapsed_time)
+                        'trial_time_seconds': float(ssp_elapsed_time),
+                        **reg_results_ssp,
                     },
                 }
                 
@@ -498,6 +532,8 @@ if __name__ == '__main__':
                         help='Optimization method to use (default: pgd_maxent_solver - Dan\'s optimized PGD solver; pgd-maxent for old model.py version)')
     parser.add_argument('--seed', type=int, default=42,
                         help='Random seed')
+    parser.add_argument('--regression', action='store_true', default=False,
+                        help='Run regression evaluation (requires target as last column)')
     
     args = parser.parse_args()
     
@@ -528,8 +564,9 @@ if __name__ == '__main__':
     print(f"Allow remeasurement: {allow_remeasurement}")
     print(f"Optimizer: {args.optimizer}")
     print(f"Seed: {args.seed}")
+    print(f"Regression: {args.regression}")
     print("="*80)
-    
+
     run_experiment(
         data_type=args.data_type,
         data_name=args.data_name,
@@ -543,5 +580,6 @@ if __name__ == '__main__':
         allow_remeasurement=allow_remeasurement,
         output_dir=args.output_dir,
         optimizer=args.optimizer,
-        seed=args.seed
+        seed=args.seed,
+        regression=args.regression,
     )
