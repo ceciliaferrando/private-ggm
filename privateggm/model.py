@@ -997,8 +997,9 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
     Iterative Private GGM with Annealing
     """
     
-    def __init__(self, rng, d, rho, alpha, beta, max_rounds, sensitivity_type, norm_bound, 
-                 optimizer="pgd-maxent", anneal_threshold_factor=None, allow_remeasurement=True):
+    def __init__(self, rng, d, rho, alpha, beta, max_rounds, sensitivity_type, norm_bound,
+                 optimizer="pgd-maxent", anneal_threshold_factor=None, allow_remeasurement=True,
+                 target_budget_fraction=0.0):
         """
         Initialize Annealing Iterative Private GGM
         
@@ -1023,6 +1024,7 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
         self.beta = beta
         self.max_rounds = max_rounds
         self.allow_remeasurement = allow_remeasurement
+        self.target_budget_fraction = target_budget_fraction
         
         # Annealing threshold: diff <= threshold_factor * measurement_std triggers doubling
         self.anneal_threshold_factor = anneal_threshold_factor or np.sqrt(2 / np.pi)
@@ -1080,8 +1082,34 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
         print(f"%%%%% Diagonal noise scale: {noise_scale} (rho_used: {self.rho_used:.6f}) %%%%%")
         print(f"  True diagonal: {np.diag(self.empirical_cov)}")
         print(f"  Noisy diagonal: {np.diag(self.Sigma_tilde)}")
-        
-        # Get initial model estimate with just diagonals
+
+        # ========================================
+        # 1b. Measure target pairs (last row/col) with dedicated budget
+        # ========================================
+        if self.target_budget_fraction > 0.0:
+            rho_target = self.rho * self.target_budget_fraction
+            rho_per_target = rho_target / (d - 1)
+            target_col = d - 1
+            target_sensitivity = diag_sensitivity  # same L-inf sensitivity: 2*T^2/n
+            for j in range(d - 1):
+                val, _, noise_scale_t = gaussian_mechanism(
+                    self.rng,
+                    self.empirical_cov[j, target_col],
+                    target_sensitivity,
+                    rho_per_target,
+                )
+                self.Sigma_tilde[j, target_col] = val
+                self.Sigma_tilde[target_col, j] = val
+                self.noise_scales[(j, target_col)] = noise_scale_t
+                self.measurements[(j, target_col)] = val
+                self.measured_entries.add((j, target_col))
+                self.measured_entries.add((target_col, j))
+                self.entry_to_rounds[(j, target_col)] = [0]
+                self.entry_to_noise_scales[(j, target_col)] = [noise_scale_t]
+            self.rho_used += rho_target
+            print(f"%%%%% Target pairs noise scale: {noise_scale_t:.4e} (rho_used: {self.rho_used:.6f}) %%%%%")
+
+        # Get initial model estimate with just diagonals (+ target pairs if applicable)
         print("\nComputing initial model estimate with diagonal entries...")
         Sigma_hat_init = self.get_current_estimate()
         self.Sigma_hat = Sigma_hat_init  # Store initial estimate

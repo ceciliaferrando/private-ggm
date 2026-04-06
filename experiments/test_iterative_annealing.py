@@ -13,7 +13,8 @@ from privateggm.data import (
 from privateggm.regression import (
     prepare_regression_split,
     extract_regression_coefficients,
-    regression_mse
+    regression_mse,
+    SSP_regression_XTy,
 )
 from privateggm.model import AnnealingIterativePrivateGGM
 from privateggm.utils import (
@@ -54,7 +55,10 @@ def run_experiment(
     output_dir='results/linesearch',
     optimizer='pgd_maxent_solver',
     seed=42,
-    regression=False
+    regression=False,
+    target_budget_fraction=0.0,
+    ssp_target_frac=0.0,
+    beta=0.1,
 ):
     """
     Run annealing experiments.
@@ -257,12 +261,13 @@ def run_experiment(
                     d=d,
                     rho=rho,
                     alpha=alpha,
-                    beta=0.1,  # 10% for selection, 90% for measurement (AIM paper default)
+                    beta=beta,
                     max_rounds=max_rounds,
                     sensitivity_type=sensitivity_type,
                     norm_bound=T,
                     optimizer=optimizer,
-                    allow_remeasurement=allow_remeasurement
+                    allow_remeasurement=allow_remeasurement,
+                    target_budget_fraction=target_budget_fraction,
                 )
                 
                 Sigma_est = model.fit(X)
@@ -380,13 +385,29 @@ def run_experiment(
                     reg_results_annealing = {
                         'beta': beta_pace.tolist(),
                         'mse': mse_pace,
+                        'regression_mode': 'target_pairs' if target_budget_fraction > 0 else 'joint',
                     }
-                    beta_ssp_ = extract_regression_coefficients(Sigma_SSP, d)
-                    mse_ssp_  = regression_mse(reg_data['X_test_feat'], reg_data['y_test'], beta_ssp_)
-                    reg_results_ssp = {
-                        'beta': beta_ssp_.tolist(),
-                        'mse': mse_ssp_,
-                    }
+
+                    if ssp_target_frac > 0:
+                        # SSP with dedicated X^Ty budget
+                        _, _, beta_ssp_, _, _ = SSP_regression_XTy(
+                            X, rho, ssp_target_frac, T, trial_rng
+                        )
+                        reg_results_ssp = {
+                            'beta': beta_ssp_.tolist(),
+                            'mse': regression_mse(reg_data['X_test_feat'], reg_data['y_test'], beta_ssp_),
+                            'regression_mode': 'XTy_split',
+                        }
+                    else:
+                        # Standard SSP: extract from joint covariance
+                        beta_ssp_ = extract_regression_coefficients(Sigma_SSP, d)
+                        reg_results_ssp = {
+                            'beta': beta_ssp_.tolist(),
+                            'mse': regression_mse(reg_data['X_test_feat'], reg_data['y_test'], beta_ssp_),
+                            'regression_mode': 'joint',
+                        }
+
+                    mse_ssp_ = reg_results_ssp['mse']
                     print(f"  Regression MSE — PACE-GGM: {mse_pace:.6f}  SSP: {mse_ssp_:.6f}")
 
                 # Store results (metrics only, no matrices)
@@ -534,7 +555,13 @@ if __name__ == '__main__':
                         help='Random seed')
     parser.add_argument('--regression', action='store_true', default=False,
                         help='Run regression evaluation (requires target as last column)')
-    
+    parser.add_argument('--beta', type=float, default=0.1,
+                        help='Fraction of per-round budget for selection vs measurement (default: 0.1)')
+    parser.add_argument('--target-budget-frac', type=float, default=0.0,
+                        help='Fraction of PACE-GGM budget dedicated to target pairs at round 0 (default: 0.0 = standard)')
+    parser.add_argument('--ssp-target-frac', type=float, default=0.0,
+                        help='Fraction of SSP budget dedicated to X^Ty cross-covariance (default: 0.0 = standard joint SSP)')
+
     args = parser.parse_args()
     
     # Handle remeasurement flags
@@ -582,4 +609,7 @@ if __name__ == '__main__':
         optimizer=args.optimizer,
         seed=args.seed,
         regression=args.regression,
+        target_budget_fraction=args.target_budget_frac,
+        ssp_target_frac=args.ssp_target_frac,
+        beta=args.beta,
     )
