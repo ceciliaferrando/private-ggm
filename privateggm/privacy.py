@@ -4,6 +4,30 @@ from scipy.special import logsumexp
 from privateggm.utils import *
 
 
+def mean_sensitivity_linf_bound(n, d, B):
+    """
+    L2 sensitivity of the sample mean vector when data is bounded by L∞ norm:
+    ||x||_∞ ≤ B  (i.e. each coordinate in [-B, B]).
+
+    Each coordinate of the mean changes by at most 2B/n under add/remove,
+    so the L2 norm of the change is sqrt(d) * 2B / n.
+
+    Reference: Dwork & Roth (2014), "The Algorithmic Foundations of DP", §3.3;
+               Biswas et al. (2020), "CoinPress", NeurIPS 2020 (Appendix A).
+    """
+    return 2.0 * B * np.sqrt(d) / n
+
+
+def mean_sensitivity_l2_bound(n, R):
+    """
+    L2 sensitivity of the sample mean vector when data is bounded by L2 norm:
+    ||x||_2 ≤ R.
+
+    The mean vector changes by at most 2R/n in L2 norm under add/remove.
+    """
+    return 2.0 * R / n
+
+
 def cov_sensitivity_linf(n, d, B):
     return np.sqrt(2) * d * B**2 / n
 
@@ -19,6 +43,33 @@ def cov_jk_sensitivity_linf(n, B):
 
 def cov_jk_sensitivity_l2(n, R):
     return R ** 2 / n
+
+
+def privatize_mean(rng, mu, n, d, B, rho, sensitivity_type='linf'):
+    """
+    Release a differentially private mean vector under zCDP via the Gaussian mechanism.
+
+    Args:
+        rng              : numpy RNG
+        mu               : (d,) empirical mean vector
+        n                : number of training samples
+        d                : dimension
+        B                : clipping bound (L∞ bound per coordinate if sensitivity_type='linf',
+                           L2 bound on full vector if sensitivity_type='l2')
+        rho              : zCDP budget for mean estimation
+        sensitivity_type : 'linf' or 'l2' (default 'linf')
+
+    Returns:
+        mu_dp       : (d,) noisy mean vector
+        noise_scale : float, std of the noise added
+    """
+    if sensitivity_type == 'linf':
+        sensitivity = mean_sensitivity_linf_bound(n, d, B)
+    else:
+        sensitivity = mean_sensitivity_l2_bound(n, B)
+    noise_scale = sensitivity / np.sqrt(2 * rho)
+    mu_dp = mu + rng.normal(0, noise_scale, size=d)
+    return mu_dp, noise_scale
 
 
 def exponential_mechanism(rng, flat_scores, Delta_cov_jk, rho):

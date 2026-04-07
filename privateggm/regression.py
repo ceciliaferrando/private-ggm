@@ -1,22 +1,27 @@
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
-from privateggm.privacy import SSP_covariance, cov_sensitivity_linf, cov_jk_sensitivity_linf, SSP_gradient
+from privateggm.privacy import SSP_covariance, cov_sensitivity_linf, cov_jk_sensitivity_linf, SSP_gradient, privatize_mean
 
 
-def prepare_regression_split(df, seed, test_size=0.2):
+def prepare_regression_split(df, seed, test_size=0.2, mu_dp=None):
     """
-    Split df into train/test, fit MinMaxScaler on train only, center using train mean.
+    Split df into train/test, fit MinMaxScaler on train only, center data.
 
     The target must be the LAST column of df.
 
+    If mu_dp is provided (a privately released mean vector), centering is done
+    with mu_dp instead of the empirical mean.  The test set is always centered
+    with the same mu used for training so that predictions are consistent.
+
     Returns:
-        X_train : (n_train, d) centered scaled train features+target — passed to PACE-GGM/SSP
-        reg_data : dict with test arrays and scaler info for evaluation
-        Sigma_true : empirical covariance of centered train data
-        T : linf clipping bound (1.0 after [-1,1] rescaling)
-        d : total dimension including target
-        n_train : number of training samples
+        X_train_c  : (n_train, d) centered scaled train features+target
+        reg_data   : dict with test arrays, scaler, and centering info
+        Sigma_true : empirical covariance of centered train data (using mu_dp if given)
+        T          : linf clipping bound (1.0 after [-1,1] rescaling)
+        d          : total dimension including target
+        n_train    : number of training samples
+        mu_used    : (d,) mean vector actually used for centering
     """
     df = df.sample(frac=1, random_state=seed).reset_index(drop=True)
     n_total = len(df)
@@ -30,27 +35,32 @@ def prepare_regression_split(df, seed, test_size=0.2):
     train_scaled = scaler.fit_transform(df_train)
     test_scaled  = scaler.transform(df_test)
 
-    # Center using train mean (same assumption already made in model.py)
-    mu_train = train_scaled.mean(axis=0)
-    X_train_c = train_scaled - mu_train
-    X_test_c  = test_scaled  - mu_train
+    # Center: use private mean if provided, else empirical mean
+    mu_emp = train_scaled.mean(axis=0)
+    mu_used = mu_dp if mu_dp is not None else mu_emp
 
-    # Sigma_true from centered train
+    X_train_c = train_scaled - mu_used
+    X_test_c  = test_scaled  - mu_used
+
+    # Sigma_true from centered train (using same mu_used for consistency)
     Sigma_true = np.cov(X_train_c.T)
 
-    # After [-1,1] rescaling and centering, linf bound is still 1
+    # After [-1,1] rescaling, linf bound is still 1
     T = 1.0
     d = df.shape[1]
 
     reg_data = {
-        'X_test_feat': X_test_c[:, :-1],   # features only
-        'y_test':      X_test_c[:, -1],    # target (centered scaled)
-        'mu_train':    mu_train,
-        'scaler':      scaler,
-        'columns':     list(df.columns),
+        'X_test_feat':  X_test_c[:, :-1],   # features only, centered
+        'y_test':       X_test_c[:, -1],    # target, centered
+        'train_scaled': train_scaled,        # uncentered scaled train (d,) — for per-trial re-centering
+        'test_scaled':  test_scaled,         # uncentered scaled test  (d,)
+        'mu_used':      mu_used,
+        'mu_emp':       mu_emp,
+        'scaler':       scaler,
+        'columns':      list(df.columns),
     }
 
-    return X_train_c, reg_data, Sigma_true, T, d, n_train
+    return X_train_c, reg_data, Sigma_true, T, d, n_train, mu_used
 
 
 def extract_regression_coefficients(Sigma, d):
@@ -99,13 +109,13 @@ def SSP_regression_XTy(X_train_c, rho, target_frac, T, rng):
     rho_XX = (1.0 - target_frac) * rho
     rho_Xy = target_frac * rho
 
-    # --- Sigma_XX: full SSP with linf sensitivity ---
+    # Sigma_XX: full SSP with linf sensitivity 
     sensitivity_XX = cov_sensitivity_linf(n, d - 1, T)
     Sigma_XX_dp, noise_scale_XX = SSP_covariance(
         Sigma_XX_true, sensitivity_XX, rho_XX, rng=rng
     )
 
-    # --- Sigma_Xy: entry-wise Gaussian noise, same linf sensitivity as cov_jk ---
+    # Sigma_Xy: entry-wise Gaussian noise, same linf sensitivity as cov_jk 
     sensitivity_Xy = cov_jk_sensitivity_linf(n, T)          # 2 * T^2 / n
     Sigma_Xy_dp, noise_scale_Xy = SSP_gradient(
         Sigma_Xy_true, sensitivity_Xy, rho_Xy, rng=rng
@@ -119,17 +129,27 @@ def SSP_regression_XTy(X_train_c, rho, target_frac, T, rng):
     return Sigma_XX_dp, Sigma_Xy_dp, beta, noise_scale_XX, noise_scale_Xy
 
 
-def regression_mse(X_test_feat, y_test, beta):
+def regression_mse(X_test_feat, y_test, beta, mu_y=0.0):
     """
     Compute MSE on centered/scaled test features using coefficient vector beta.
+
+    If mu_y is provided (the privately released mean of y on the training set),
+    it is added back to the prediction:
+        y_pred = mu_y + beta^T (x - mu_x)
+    where x is already centered by mu_x (done in prepare_regression_split),
+    so the call reduces to:
+        y_pred = mu_y + X_test_feat @ beta
+
+    Without private mean (mu_y=0.0) this is equivalent to the old behaviour.
 
     Args:
         X_test_feat : (n_test, d-1) centered scaled test features
         y_test      : (n_test,) centered scaled test targets
         beta        : (d-1,) regression coefficients
+        mu_y        : float, private mean of target (default 0.0 = no correction)
 
     Returns:
         mse : float
     """
-    y_pred = X_test_feat @ beta
+    y_pred = mu_y + X_test_feat @ beta
     return float(np.mean((y_test - y_pred) ** 2))

@@ -21,7 +21,7 @@ from privateggm.utils import (
     mahalanobis_cov_error,
     frobenius_error
 )
-from privateggm.privacy import SSP_covariance, cov_sensitivity_l2, cov_sensitivity_linf, cov_jk_sensitivity_l2, cov_jk_sensitivity_linf, gaussian_mechanism
+from privateggm.privacy import SSP_covariance, cov_sensitivity_l2, cov_sensitivity_linf, cov_jk_sensitivity_l2, cov_jk_sensitivity_linf, gaussian_mechanism, privatize_mean
 
 
 def save_results(results, output_file):
@@ -59,6 +59,7 @@ def run_experiment(
     target_budget_fraction=0.0,
     ssp_target_frac=0.0,
     beta=0.1,
+    private_mean=False,
 ):
     """
     Run annealing experiments.
@@ -157,9 +158,11 @@ def run_experiment(
 
         if regression:
             # Train/test split — scaler fit on train only, center using train mean
-            X, reg_data, Sigma_true, T, d, n_train = prepare_regression_split(
+            X, reg_data, Sigma_true, T, d, n_train, _ = prepare_regression_split(
                 df, seed=seed, test_size=0.2)
             print(f"Regression mode: n_train={n_train}, n_test={len(df)-n_train}, d={d}")
+            if private_mean:
+                print("  Private mean mode: rho will be split 50/50 between mean and covariance")
         else:
             reg_data = None
 
@@ -245,9 +248,37 @@ def run_experiment(
                 # Create RNG for this trial
                 trial_rng = np.random.default_rng(seed=seed + trial)
                 
+                # Private mean: use rho/2 for mean, rho/2 for covariance
+                # Total budget = rho (split equally). Sigma_true_for_metrics always
+                # uses the empirical (non-private) centering for error computation.
+                if private_mean and regression and reg_data is not None:
+                    rho_mean = rho / 2.0
+                    rho_cov  = rho / 2.0
+                    n_train_samples = reg_data['train_scaled'].shape[0]
+                    mu_dp, mean_noise_scale = privatize_mean(
+                        trial_rng, reg_data['mu_emp'], n_train_samples, d, T, rho_mean,
+                        sensitivity_type=sensitivity_type)
+                    # Re-center train and test with private mean
+                    X_trial = reg_data['train_scaled'] - mu_dp
+                    X_test_c_dp = reg_data['test_scaled'] - mu_dp
+                    trial_reg_data = {
+                        **reg_data,
+                        'X_test_feat': X_test_c_dp[:, :-1],
+                        'y_test':      X_test_c_dp[:, -1],
+                        'mu_used':     mu_dp,
+                    }
+                    Sigma_for_ssp = np.cov(X_trial.T)
+                    print(f"  Private mean: rho_mean={rho_mean}, rho_cov={rho_cov}, "
+                          f"mean_noise_scale={mean_noise_scale:.4e}")
+                else:
+                    rho_cov       = rho
+                    X_trial       = X
+                    trial_reg_data = reg_data
+                    Sigma_for_ssp  = Sigma_true
+
                 # Run annealing algorithm
                 print(f"Running annealing algorithm with:")
-                print(f"  d={d}, rho={rho}, alpha={alpha}")
+                print(f"  d={d}, rho={rho_cov}, alpha={alpha}")
                 print(f"  sensitivity_type={sensitivity_type}, norm_bound={T}")
                 print(f"  allow_remeasurement={allow_remeasurement}")
                 
@@ -259,7 +290,7 @@ def run_experiment(
                 model = AnnealingIterativePrivateGGM(
                     rng=trial_rng,
                     d=d,
-                    rho=rho,
+                    rho=rho_cov,
                     alpha=alpha,
                     beta=beta,
                     max_rounds=max_rounds,
@@ -269,8 +300,8 @@ def run_experiment(
                     allow_remeasurement=allow_remeasurement,
                     target_budget_fraction=target_budget_fraction,
                 )
-                
-                Sigma_est = model.fit(X)
+
+                Sigma_est = model.fit(X_trial)
                 
                 # Save convergence information for trial 0 only (in same folder as main results)
                 if trial == 0 and hasattr(model, 'convergence_history') and model.convergence_history:
@@ -335,7 +366,7 @@ def run_experiment(
                 # Compute SSP baseline with same privacy budget
                 import time
                 ssp_start_time = time.time()
-                Sigma_SSP, ssp_noise_scale = SSP_covariance(Sigma_true, ssp_sensitivity, rho, rng=trial_rng)
+                Sigma_SSP, ssp_noise_scale = SSP_covariance(Sigma_for_ssp, ssp_sensitivity, rho_cov, rng=trial_rng)
                 ssp_elapsed_time = time.time() - ssp_start_time
                 mah_error_ssp = mahalanobis_cov_error(Sigma_true, Sigma_SSP)
                 frob_error_ssp = frobenius_error(Sigma_true, Sigma_SSP)
@@ -379,9 +410,9 @@ def run_experiment(
                 # Regression evaluation (if enabled)
                 reg_results_annealing = {}
                 reg_results_ssp = {}
-                if regression and reg_data is not None:
+                if regression and trial_reg_data is not None:
                     beta_pace = extract_regression_coefficients(Sigma_est, d)
-                    mse_pace  = regression_mse(reg_data['X_test_feat'], reg_data['y_test'], beta_pace)
+                    mse_pace  = regression_mse(trial_reg_data['X_test_feat'], trial_reg_data['y_test'], beta_pace)
                     reg_results_annealing = {
                         'beta': beta_pace.tolist(),
                         'mse': mse_pace,
@@ -391,11 +422,11 @@ def run_experiment(
                     if ssp_target_frac > 0:
                         # SSP with dedicated X^Ty budget
                         _, _, beta_ssp_, _, _ = SSP_regression_XTy(
-                            X, rho, ssp_target_frac, T, trial_rng
+                            X_trial, rho_cov, ssp_target_frac, T, trial_rng
                         )
                         reg_results_ssp = {
                             'beta': beta_ssp_.tolist(),
-                            'mse': regression_mse(reg_data['X_test_feat'], reg_data['y_test'], beta_ssp_),
+                            'mse': regression_mse(trial_reg_data['X_test_feat'], trial_reg_data['y_test'], beta_ssp_),
                             'regression_mode': 'XTy_split',
                         }
                     else:
@@ -403,7 +434,7 @@ def run_experiment(
                         beta_ssp_ = extract_regression_coefficients(Sigma_SSP, d)
                         reg_results_ssp = {
                             'beta': beta_ssp_.tolist(),
-                            'mse': regression_mse(reg_data['X_test_feat'], reg_data['y_test'], beta_ssp_),
+                            'mse': regression_mse(trial_reg_data['X_test_feat'], trial_reg_data['y_test'], beta_ssp_),
                             'regression_mode': 'joint',
                         }
 
@@ -561,6 +592,8 @@ if __name__ == '__main__':
                         help='Fraction of PACE-GGM budget dedicated to target pairs at round 0 (default: 0.0 = standard)')
     parser.add_argument('--ssp-target-frac', type=float, default=0.0,
                         help='Fraction of SSP budget dedicated to X^Ty cross-covariance (default: 0.0 = standard joint SSP)')
+    parser.add_argument('--private-mean', action='store_true', default=False,
+                        help='Use private mean: split rho equally between mean estimation and covariance estimation')
 
     args = parser.parse_args()
     
@@ -592,6 +625,7 @@ if __name__ == '__main__':
     print(f"Optimizer: {args.optimizer}")
     print(f"Seed: {args.seed}")
     print(f"Regression: {args.regression}")
+    print(f"Private mean: {args.private_mean}")
     print("="*80)
 
     run_experiment(
@@ -612,4 +646,5 @@ if __name__ == '__main__':
         target_budget_fraction=args.target_budget_frac,
         ssp_target_frac=args.ssp_target_frac,
         beta=args.beta,
+        private_mean=args.private_mean,
     )
