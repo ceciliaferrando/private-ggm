@@ -24,7 +24,7 @@ import time
 
 import numpy as np
 
-from ._shared import _weights, project_psd
+from ._shared import _weights, project_psd, normalize_coo
 from ._jtree import JunctionTree, build_jtree  # noqa: F401 (re-exported for callers)
 
 
@@ -281,7 +281,7 @@ def maxent_completion_dense(jtree, clique_mats):
 
 # ── Solver ────────────────────────────────────────────────────────────────────
 
-def dr_splitting(A, inds, tau,
+def dr_splitting(rows, cols, vals, tau, d,
                  gamma=1.0, rho=1.0,
                  max_iters=5000, eps_abs=1e-5,
                  diag_every=25,
@@ -291,9 +291,10 @@ def dr_splitting(A, inds, tau,
 
     Parameters
     ----------
-    A          : (d, d) ndarray — noisy observations (symmetric; only E entries used)
-    inds       : (m, 2) int array — observed index pairs
+    rows, cols : (m,) int arrays — observed index pairs (any triangular format)
+    vals       : (m,) float array — noisy observed values
     tau        : (m,) float array — noise std-devs
+    d          : int — matrix dimension
     gamma      : float — proximal step size (> 0)
     rho        : float — D-R relaxation parameter (0 < rho < 2)
     max_iters  : int — maximum iterations
@@ -307,8 +308,8 @@ def dr_splitting(A, inds, tau,
     hist      : list of per-iteration dicts with keys:
                     time, obj, entropy, r_primal, r_dual
     """
-    d              = A.shape[0]
-    obs_rows, obs_cols = inds[:, 0], inds[:, 1]
+    rows, cols, vals, tau = normalize_coo(rows, cols, vals, tau)
+    obs_rows, obs_cols = rows, cols
     jtree = build_jtree(obs_rows, obs_cols, d, elim_order)
     geom  = build_geometry(jtree, obs_rows, obs_cols, tau)
 
@@ -326,7 +327,8 @@ def dr_splitting(A, inds, tau,
 
     # vec scales off-diagonal entries by √2 (so ‖vec(Y)‖² = ‖Y‖_F²).  Halving w
     # for off-diagonal entries compensates, so np.sum(w * r_vec²) == outer objective.
-    a = vec(A, obs_rows, obs_cols)
+    a = vals.copy()
+    a[obs_rows != obs_cols] *= _SQRT2
     w = w.copy()
     w[obs_rows != obs_cols] /= 2.0
 

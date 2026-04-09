@@ -23,7 +23,48 @@ def _weights(tau):
     return w / w.max()
 
 
-def _weighted_obj(X, A, inds, w):
+def _weighted_obj(X, rows, cols, vals, w):
     """Weighted squared-error objective f(X_E)."""
-    r = X[inds[:, 0], inds[:, 1]] - A[inds[:, 0], inds[:, 1]]
+    r = X[rows, cols] - vals
     return float(np.sum(w * r ** 2))
+
+
+def normalize_coo(rows, cols, vals, tau):
+    """Normalize COO observations to upper-triangle (rows <= cols).
+
+    Swaps (i,j) pairs where i > j, then combines duplicate entries
+    (including symmetric pairs) via inverse-variance weighting:
+        val_combined = sum(w_k * v_k) / sum(w_k)
+        tau_combined = 1 / sqrt(sum(w_k))   where w_k = 1/tau_k^2
+
+    Returns (rows, cols, vals, tau) with rows <= cols and one entry
+    per unique (i,j) pair, sorted by (row, col).
+    """
+    rows = np.asarray(rows, dtype=int)
+    cols = np.asarray(cols, dtype=int)
+    vals = np.asarray(vals, dtype=float)
+    tau  = np.asarray(tau,  dtype=float)
+
+    lo = np.minimum(rows, cols)
+    hi = np.maximum(rows, cols)
+
+    d_enc = int(hi.max()) + 1
+    keys  = lo * d_enc + hi          # unique int per (lo, hi) pair
+
+    w     = 1.0 / tau ** 2
+    order = np.argsort(keys, kind='stable')
+    keys_s = keys[order]
+    w_s    = w[order]
+    v_s    = vals[order]
+
+    unique_keys, inv = np.unique(keys_s, return_inverse=True)
+    w_tot  = np.zeros(len(unique_keys))
+    wv_tot = np.zeros(len(unique_keys))
+    np.add.at(w_tot,  inv, w_s)
+    np.add.at(wv_tot, inv, w_s * v_s)
+
+    rows_n = unique_keys // d_enc
+    cols_n = unique_keys %  d_enc
+    vals_n = wv_tot / w_tot
+    tau_n  = 1.0 / np.sqrt(w_tot)
+    return rows_n, cols_n, vals_n, tau_n

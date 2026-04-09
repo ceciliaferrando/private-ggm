@@ -40,35 +40,33 @@ sys.path.insert(0, _HERE)
 sys.path.insert(0, os.path.dirname(os.path.dirname(_HERE)))
 
 from problems import PROBLEMS, make_problem
-from privateggm.solvers import pgd, pgd_maxent, ipm_chol
-from privateggm.solvers import clarabel_solver
-from privateggm.solvers.ipm_chol_sparse import ipm_chol_sparse
-from privateggm.solvers.dr_splitting import dr_splitting
+from privateggm.solve import solve
 
 ALL_SOLVERS = [
-    ('pgd',             pgd),
-    ('pgd_maxent',      pgd_maxent),
-    ('ipm_chol',        ipm_chol),
-    ('ipm_chol_sparse', ipm_chol_sparse),
-    ('clarabel',        clarabel_solver),
-    ('dr_splitting',    dr_splitting),
+    'pgd',
+    'pgd_maxent',
+    'ipm_chol',
+    'ipm_chol_sparse',
+    'clarabel',
+    'dr_splitting',
 ]
 
-def run_all(solvers, problems=PROBLEMS):
+def run_all(solver_names, problems=PROBLEMS):
     all_results = {}
 
     for spec in problems:
         d, noise_level = spec['d'], spec['noise_level']
         key = (d, noise_level)
         prob = make_problem(**spec)
-        print(f"\nd={d:>2}  noise={noise_level:<4}  |inds|={len(prob['inds'])}")
+        print(f"\nd={d:>2}  noise={noise_level:<4}  |obs|={len(prob['rows'])}")
 
         solver_results = {}
-        for name, solver in solvers:
+        for name in solver_names:
             print(f"  {name:<20}", end='', flush=True)
             t0 = time.perf_counter()
             try:
-                S_hat, hist = solver(prob['A'], prob['inds'], prob['tau'])
+                S_hat, hist = solve(prob['rows'], prob['cols'], prob['vals'],
+                                    prob['tau'], prob['d'], solver=name)
                 elapsed = time.perf_counter() - t0
                 last = hist[-1]
                 print(f"  {elapsed:6.2f}s  {len(hist):4d} iters  "
@@ -81,12 +79,12 @@ def run_all(solvers, problems=PROBLEMS):
 
         all_results[key] = {'problem': prob, 'solvers': solver_results}
 
-    all_results['solvers_run'] = [name for name, _ in solvers]
+    all_results['solvers_run'] = solver_names
     return all_results
 
 
 if __name__ == '__main__':
-    valid_names = [name for name, _ in ALL_SOLVERS]
+    valid_names = ALL_SOLVERS
     valid_d     = sorted({s['d'] for s in PROBLEMS})
 
     parser = argparse.ArgumentParser(description='Run benchmark solvers.')
@@ -107,11 +105,11 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
 
-    unknown = [s for s in args.solvers if s not in dict(ALL_SOLVERS)]
+    unknown = [s for s in args.solvers if s not in valid_names]
     if unknown:
         parser.error(f"Unknown solver(s): {unknown}. Valid choices: {valid_names}")
 
-    solvers = [(name, fn) for name, fn in ALL_SOLVERS if name in args.solvers]
+    solver_names = [name for name in ALL_SOLVERS if name in args.solvers]
 
     problems = PROBLEMS
     if args.d is not None:
@@ -121,7 +119,7 @@ if __name__ == '__main__':
         problems = [s for s in PROBLEMS if s['d'] in args.d]
 
     out_path = os.path.join(_HERE, args.output)
-    results = run_all(solvers, problems)
+    results = run_all(solver_names, problems)
     with open(out_path, 'wb') as f:
         pickle.dump(results, f)
     print(f"\nSaved → {out_path}")

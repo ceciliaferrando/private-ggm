@@ -8,10 +8,12 @@ import numpy as np
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import connected_components
 
+from .solvers._shared import normalize_coo
 from .solvers.ipm_chol import ipm_chol
 from .solvers.ipm_chol_sparse import ipm_chol_sparse
 from .solvers.pgd_maxent import pgd, pgd_maxent
 from .solvers.dr_splitting import dr_splitting
+from .solvers.clarabel import clarabel_solver
 
 _SOLVER_REGISTRY = {
     'ipm_chol': ipm_chol,
@@ -19,6 +21,7 @@ _SOLVER_REGISTRY = {
     'pgd': pgd,
     'pgd_maxent': pgd_maxent,
     'dr_splitting': dr_splitting,
+    'clarabel': clarabel_solver,
 }
 
 
@@ -33,12 +36,8 @@ def _get_solver_fn(solver):
 
 
 def _solve_block(rows, cols, vals, tau, d, solver_fn, **kwargs):
-    """Convert sparse inputs to dense A and call solver."""
-    A = np.zeros((d, d))
-    A[rows, cols] = vals
-    A[cols, rows] = vals   # solvers expect a symmetric A
-    inds = np.stack([rows, cols], axis=1)
-    return solver_fn(A, inds, tau, **kwargs)
+    """Call solver directly with sparse inputs."""
+    return solver_fn(rows, cols, vals, tau, d, **kwargs)
 
 
 def solve(rows, cols, vals, tau, d,
@@ -52,7 +51,10 @@ def solve(rows, cols, vals, tau, d,
     Parameters
     ----------
     rows, cols : array-like, shape (m,)
-        Upper-triangle + diagonal indices of observed entries (rows <= cols).
+        Indices of observed entries.  Any triangular format is accepted
+        (upper, lower, or mixed); symmetric pairs and duplicates are combined
+        via inverse-variance weighting and normalized to upper-triangle
+        (rows <= cols) before solving.
     vals : array-like, shape (m,)
         Noisy observed values at (rows[k], cols[k]).
     tau : array-like, shape (m,)
@@ -62,7 +64,7 @@ def solve(rows, cols, vals, tau, d,
     solver : str or callable
         Solver to use.  String names: 'ipm_chol' (default), 'pgd',
         'pgd_maxent', 'ipm_chol_sparse', 'dr_splitting'.  Or pass any callable
-        with signature fn(A, inds, tau, **kwargs) -> (Sigma, hist).
+        with signature fn(rows, cols, vals, tau, d, **kwargs) -> (Sigma, hist).
     decompose : None | 'diag' | 'blocks'
         Sparsity decomposition strategy:
         - None    — solve the full d×d problem directly.
@@ -86,10 +88,7 @@ def solve(rows, cols, vals, tau, d,
         Convergence history from the largest non-singleton component, or None
         if all components were handled as scalars.
     """
-    rows = np.asarray(rows)
-    cols = np.asarray(cols)
-    vals = np.asarray(vals, dtype=float)
-    tau = np.asarray(tau, dtype=float)
+    rows, cols, vals, tau = normalize_coo(rows, cols, vals, tau)
     solver_fn = _get_solver_fn(solver)
 
     if decompose is None:

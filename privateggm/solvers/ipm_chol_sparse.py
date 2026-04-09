@@ -26,7 +26,7 @@ import time
 import numpy as np
 from scipy.optimize import minimize
 
-from ._shared import _weights
+from ._shared import _weights, normalize_coo
 from ._jtree import build_jtree, obs_routing
 
 
@@ -144,13 +144,13 @@ class SparseCholeskyModel:
     tau       : (m,) float array — noise std-devs
     """
 
-    def __init__(self, jtree, Sigma_obs, inds, tau):
+    def __init__(self, jtree, vals, inds, tau):
         obs_rows = inds[:, 0]
         obs_cols = inds[:, 1]
 
         self.jtree  = jtree
         self.w      = _weights(tau)
-        self._a_obs = Sigma_obs[obs_rows, obs_cols]
+        self._a_obs = vals
         self.K      = len(jtree.cliques)
 
         # Variable layout
@@ -388,7 +388,7 @@ def _recover_covariance(jtree, A, L):
 
 # ── Solver ────────────────────────────────────────────────────────────────────
 
-def ipm_chol_sparse(Sigma_obs, inds, tau,
+def ipm_chol_sparse(rows, cols, vals, tau, d,
                     mu_init=1.0, mu_factor=0.5, eps=1e-8, eps_coarse=1e-2,
                     max_outer=40, max_inner=200,
                     elim_order=None):
@@ -399,9 +399,10 @@ def ipm_chol_sparse(Sigma_obs, inds, tau,
 
     Parameters
     ----------
-    Sigma_obs  : (d, d) ndarray — noisy observations (symmetric; only E entries used)
-    inds       : (m, 2) int array — observed index pairs (upper-tri including diagonal)
+    rows, cols : (m,) int arrays — observed index pairs (any triangular format)
+    vals       : (m,) float array — noisy observed values
     tau        : (m,) float array — noise std-devs
+    d          : int — matrix dimension
     mu_init    : initial barrier weight
     mu_factor  : geometric decrease factor for μ (< 1)
     eps        : termination: stop outer loop when μ ≤ eps
@@ -416,17 +417,18 @@ def ipm_chol_sparse(Sigma_obs, inds, tau,
     hist  : list of per-outer-iteration dicts with keys:
                 time, obj, entropy, mu, inner_iters
     """
-    d        = Sigma_obs.shape[0]
-    obs_rows = inds[:, 0]
-    obs_cols = inds[:, 1]
+    rows, cols, vals, tau = normalize_coo(rows, cols, vals, tau)
+    obs_rows = rows
+    obs_cols = cols
+    inds     = np.stack([rows, cols], axis=1)
 
     jtree = build_jtree(obs_rows, obs_cols, d, elim_order)
-    model = SparseCholeskyModel(jtree, Sigma_obs, inds, tau)
+    model = SparseCholeskyModel(jtree, vals, inds, tau)
 
     K = model.K
 
     # Initialise at X = αI  →  A_k = 0, L_{U_k,U_k} = √α I
-    alpha      = max(float(np.mean(np.abs(np.diag(Sigma_obs)))), 1.0)
+    alpha      = max(float(np.mean(np.abs(vals[rows == cols]))), 1.0)
     sqrt_alpha = np.sqrt(alpha)
     A = [np.zeros((model._nU_list[k], model._nS_list[k])) for k in range(K)]
     L = [sqrt_alpha * np.eye(model._nU_list[k])            for k in range(K)]

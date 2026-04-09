@@ -32,8 +32,7 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _HERE)
 sys.path.insert(0, os.path.dirname(os.path.dirname(_HERE)))
 
-from privateggm.solvers.ipm_chol import ipm_chol
-from privateggm.solvers.ipm_chol_sparse import ipm_chol_sparse
+from privateggm.solve import solve
 
 
 # ── Problem grid ──────────────────────────────────────────────────────────────
@@ -76,23 +75,21 @@ def make_problem_by_degree(d, avg_degree, seed=42, tau_diag=TAU_DIAG):
     inds = np.array(diag_inds + off_inds)
     tau  = np.array([tau_diag] * d + [tau_diag * 2.0] * n_off)
 
-    A = np.zeros((d, d))
-    for k, (i, j) in enumerate(inds):
-        noise   = rng.normal(0, tau[k])
-        A[i, j] = Sigma_true[i, j] + noise
-        A[j, i] = A[i, j]
+    vals = np.array([Sigma_true[i, j] + rng.normal(0, tau[k])
+                     for k, (i, j) in enumerate(inds)])
 
-    return {'A': A, 'inds': inds, 'tau': tau, 'd': d,
+    return {'rows': inds[:, 0], 'cols': inds[:, 1], 'vals': vals, 'tau': tau, 'd': d,
             'avg_degree': avg_degree, 'n_off': n_off, 'seed': seed}
 
 
 # ── Timing helper ─────────────────────────────────────────────────────────────
 
-def time_solver(solver_fn, prob):
-    """Run solver_fn on prob; return (elapsed_seconds, final_obj) or (None, None)."""
+def time_solver(solver_name, prob):
+    """Run named solver on prob; return (elapsed_seconds, final_obj) or (None, None)."""
     try:
         t0 = time.perf_counter()
-        _, hist = solver_fn(prob['A'], prob['inds'], prob['tau'])
+        _, hist = solve(prob['rows'], prob['cols'], prob['vals'], prob['tau'], prob['d'],
+                        solver=solver_name)
         elapsed = time.perf_counter() - t0
         return elapsed, hist[-1]['obj']
     except Exception as e:
@@ -120,14 +117,14 @@ def run(output_path, seeds=N_SEEDS):
                 # Dense solver — skip for very large d to save time
                 if d <= 1024:
                     print(f"    ipm_chol       ", end='', flush=True)
-                    t_dense, obj_dense = time_solver(ipm_chol, prob)
+                    t_dense, obj_dense = time_solver('ipm_chol', prob)
                     print(f"  {t_dense:.2f}s" if t_dense is not None else "  FAIL")
                 else:
                     print(f"    ipm_chol       skipped (d>{1024})")
                     t_dense, obj_dense = None, None
 
                 print(f"    ipm_chol_sparse", end='', flush=True)
-                t_sparse, obj_sparse = time_solver(ipm_chol_sparse, prob)
+                t_sparse, obj_sparse = time_solver('ipm_chol_sparse', prob)
                 print(f"  {t_sparse:.2f}s" if t_sparse is not None else "  FAIL")
 
                 results.append({

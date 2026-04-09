@@ -6,10 +6,10 @@ import clarabel
 import numpy as np
 from scipy import sparse
 
-from ._shared import _weights, _weighted_obj
+from ._shared import _weights, _weighted_obj, normalize_coo
 
 
-def clarabel_solver(A, inds, tau,
+def clarabel_solver(rows, cols, vals, tau, d,
                     verbose=False, max_iter=200,
                     tol_gap_abs=1e-8, tol_gap_rel=1e-8, tol_feas=1e-8):
     """
@@ -26,6 +26,10 @@ def clarabel_solver(A, inds, tau,
 
     Parameters
     ----------
+    rows, cols  : (m,) int arrays — observed index pairs (any triangular format)
+    vals        : (m,) float array — noisy observed values
+    tau         : (m,) float array — noise std-devs
+    d           : int — matrix dimension
     verbose     : pass True to enable Clarabel's own iteration output
     max_iter    : maximum IPM iterations
     tol_gap_abs : absolute duality gap tolerance
@@ -37,7 +41,7 @@ def clarabel_solver(A, inds, tau,
     Uniform  : time, obj, entropy  (entropy = nan except on the last entry)
     Clarabel : mu, res_primal, res_dual, status
     """
-    d    = A.shape[0]
+    rows, cols, vals, tau = normalize_coo(rows, cols, vals, tau)
     nvec = d * (d + 1) // 2
 
     # Upper-triangle column-major ordering: column c, rows 0..c
@@ -45,16 +49,12 @@ def clarabel_solver(A, inds, tau,
     c_ut = np.array([c for c in range(d) for r in range(c + 1)])
     is_diag_ut = (r_ut == c_ut)
 
-    # Map inds (which may be upper- or lower-triangle) to upper-triangle
-    # column-major index.  For upper-triangle entry (r,c) with r<=c:
-    #   k = c*(c+1)//2 + r  =  big*(big+1)//2 + small
-    i_obs, j_obs = inds[:, 0], inds[:, 1]
-    big   = np.maximum(i_obs, j_obs)
-    small = np.minimum(i_obs, j_obs)
-    k_obs = big * (big + 1) // 2 + small
+    # Map (rows, cols) — already upper-triangle after normalize_coo — to
+    # upper-triangle column-major index:  k = cols*(cols+1)//2 + rows
+    k_obs = cols * (cols + 1) // 2 + rows
 
     w     = _weights(tau)
-    a_obs = A[i_obs, j_obs]
+    a_obs = vals
 
     # Constant dropped from Clarabel objective: C = sum(w * a^2)
     # Recover our objective via:  obj = cost_primal + C_const
@@ -116,7 +116,7 @@ def clarabel_solver(A, inds, tau,
     else:
         hist.append({
             'time':    time.perf_counter() - t0,
-            'obj':     _weighted_obj(Sigma_hat, A, inds, w),
+            'obj':     _weighted_obj(Sigma_hat, rows, cols, vals, w),
             'entropy': float(logdet),
             'status':  str(sol.status),
         })
