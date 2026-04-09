@@ -267,7 +267,8 @@ def run_experiment(
                         'y_test':      X_test_c_dp[:, -1],
                         'mu_used':     mu_dp,
                     }
-                    Sigma_for_ssp = np.cov(X_trial.T)
+                    n_tr = X_trial.shape[0]
+                    Sigma_for_ssp = X_trial.T @ X_trial / (n_tr - 1)  # second moment, X_trial already centered with mu_dp
                     print(f"  Private mean: rho_mean={rho_mean}, rho_cov={rho_cov}, "
                           f"mean_noise_scale={mean_noise_scale:.4e}")
                 else:
