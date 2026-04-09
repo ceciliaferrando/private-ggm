@@ -301,7 +301,7 @@ def run_experiment(
                     target_budget_fraction=target_budget_fraction,
                 )
 
-                Sigma_est = model.fit(X_trial)
+                Sigma_est = model.fit(X_trial, pre_centered=private_mean and regression)
                 
                 # Save convergence information for trial 0 only (in same folder as main results)
                 if trial == 0 and hasattr(model, 'convergence_history') and model.convergence_history:
@@ -341,17 +341,17 @@ def run_experiment(
                 mah_error = mahalanobis_cov_error(Sigma_true, Sigma_est)
                 frob_error = frobenius_error(Sigma_true, Sigma_est)
                 
-                # Compute TRUE diagonal-only baseline: spend ENTIRE budget on diagonal only
-                # This is a reference baseline where we measure only diagonals with full budget
-                # Use cov_jk_sensitivity for individual entry sensitivity (not full covariance)
+                # Diagonal-only baseline: spend rho_cov on diagonal only (same budget as PACE-GGM/SSP).
+                # Uses Sigma_for_ssp which is computed from X_trial (privately centered when
+                # private_mean=True, empirical centering otherwise) — fair comparison.
                 diag_entry_sensitivity = cov_jk_sensitivity_l2(n, T) if sensitivity_type == 'l2' else cov_jk_sensitivity_linf(n, T)
                 Sigma_diag_baseline = np.zeros_like(Sigma_true)
-                rho_per_diag_full = rho / d  # Full budget divided equally among diagonals
-                print(f"Baseline: Spending {rho} budget on {d} diagonals = {rho_per_diag_full} per diagonal")
+                rho_per_diag_full = rho_cov / d
+                print(f"Baseline: Spending {rho_cov} budget on {d} diagonals = {rho_per_diag_full} per diagonal")
                 for i in range(d):
                     noisy_diag, _, _ = gaussian_mechanism(
                         trial_rng,
-                        Sigma_true[i, i],
+                        Sigma_for_ssp[i, i],
                         diag_entry_sensitivity,
                         rho_per_diag_full
                     )

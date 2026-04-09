@@ -815,19 +815,21 @@ class IterativePrivateGGM:
                     
         return scores
 
-    def fit(self, X):
+    def fit(self, X, pre_centered=False):
         """
         Fit the private GGM model to data
-        
+
         Args:
             X: Data matrix of shape (n_samples, n_features)
+            pre_centered: if True, treat X as already centered (skip internal mean subtraction).
+                          Use this when the caller has centered X with a private mean.
         """
         n, d = X.shape
         assert d == self.d
-        
-        # Center the data first
-        X_centered = X - X.mean(axis=0)
-        
+
+        # Center the data (skip if caller already centered with a private mean)
+        X_centered = X if pre_centered else X - X.mean(axis=0)
+
         # Compute empirical covariance matrix once and store it
         # CHANGED IT TO CENTERED
         self.empirical_cov = (X_centered.T @ X_centered) / n
@@ -1034,21 +1036,23 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
         self.rho_per_round_measure  = None
         self.rho_used = 0.0
         
-    def fit(self, X):
+    def fit(self, X, pre_centered=False):
         """
         Fit with annealing: dynamically adjust budgets based on convergence
-        
+
         Args:
             X: Data matrix of shape (n_samples, n_features)
+            pre_centered: if True, treat X as already centered (skip internal mean subtraction).
+                          Use this when the caller has centered X with a private mean.
         """
         import time
         trial_start_time = time.time()
-        
+
         n, d = X.shape
         assert d == self.d
-        
-        # Center the data (NOTE: mean will eventually be released privately!)
-        X_centered = X - X.mean(axis=0)
+
+        # Center the data (skip if caller already centered with a private mean)
+        X_centered = X if pre_centered else X - X.mean(axis=0)
         self.empirical_cov = (X_centered.T @ X_centered) / n
 
         # Initialize storage for measurements and noise_scales

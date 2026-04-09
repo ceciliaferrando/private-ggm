@@ -101,8 +101,11 @@ def SSP_regression_XTy(X_train_c, rho, target_frac, T, rng):
     X_feat = X_train_c[:, :-1]   # (n, d-1)
     y_vec  = X_train_c[:, -1]    # (n,)
 
-    # Empirical statistics (sample covariance convention, n-1 denominator)
-    Sigma_XX_true = np.cov(X_feat.T)                        # (d-1, d-1)
+    # Empirical statistics (n-1 denominator, no mean subtraction — X_train_c must be pre-centered).
+    # Using the second moment directly ensures consistency with the centering used by the caller
+    # (empirical mean or private mean). np.cov would re-center with the sample mean, which
+    # undoes private-mean centering and creates a mismatch with Sigma_Xy.
+    Sigma_XX_true = X_feat.T @ X_feat / (n - 1)            # (d-1, d-1)
     Sigma_Xy_true = X_feat.T @ y_vec / (n - 1)             # (d-1,)
 
     # Budget split
