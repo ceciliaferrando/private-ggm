@@ -29,6 +29,25 @@ def _weighted_obj(X, rows, cols, vals, w):
     return float(np.sum(w * r ** 2))
 
 
+def dense_to_coo(A, inds, tau):
+    """Convert dense observation format to sparse COO format.
+
+    Parameters
+    ----------
+    A    : (d, d) ndarray — symmetric observation matrix
+    inds : (m, 2) int array — observed index pairs
+    tau  : (m,) float array — noise std-devs
+
+    Returns
+    -------
+    rows, cols, vals, tau, d
+    """
+    rows = inds[:, 0]
+    cols = inds[:, 1]
+    vals = A[rows, cols]
+    return rows, cols, vals, tau, A.shape[0]
+
+
 def normalize_coo(rows, cols, vals, tau):
     """Normalize COO observations to upper-triangle (rows <= cols).
 
