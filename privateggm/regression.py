@@ -42,8 +42,9 @@ def prepare_regression_split(df, seed, test_size=0.2, mu_dp=None):
     X_train_c = train_scaled - mu_used
     X_test_c  = test_scaled  - mu_used
 
-    # Sigma_true from centered train (using same mu_used for consistency)
-    Sigma_true = np.cov(X_train_c.T)
+    # Sigma_true from centered train — use second moment (no internal mean subtraction)
+    # so it is consistent with the centering above regardless of mu_used
+    Sigma_true = X_train_c.T @ X_train_c / (n_train - 1)
 
     # After [-1,1] rescaling, linf bound is still 1
     T = 1.0
