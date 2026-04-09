@@ -285,8 +285,7 @@ def dr_splitting(rows, cols, vals, tau, d,
                  gamma=1.0, rho=1.0,
                  max_iters=5000, eps_abs=1e-5,
                  diag_every=25,
-                 elim_order=None,
-                 min_eig=0.0):
+                 elim_order=None):
     """Douglas-Rachford splitting for the sparse PSD-nearness problem.
 
     Parameters
@@ -350,15 +349,14 @@ def dr_splitting(rows, cols, vals, tau, d,
     t0   = time.perf_counter()
 
     def prox_psd(y):
-        """Project all clique submatrices of flat y onto {X : X ⪽ min_eig·I}."""
+        """Project all clique submatrices of flat y onto the PSD cone."""
         y_new = y.copy()
-        y_new[size_one_inds] = np.maximum(y[size_one_inds], max(_thresh, min_eig))
+        y_new[size_one_inds] = np.maximum(y[size_one_inds], _thresh)
         for k in large_clique_ks:
-            y_new[y_slices[k]] = vec(project_psd(unvec(y[y_slices[k]], clique_sizes[k]),
-                                                  min_eig=min_eig))
+            y_new[y_slices[k]] = vec(project_psd(unvec(y[y_slices[k]], clique_sizes[k])))
         return y_new
 
-    def project_V(x, y):
+    def _project_V_inplace(x, y):
         """Project (x, y) onto V = {(x,y) : y_k = P_{β_k} x}.
 
         Mutates x in-place. Returns projected (x, y) where y is a new array.
@@ -384,7 +382,7 @@ def dr_splitting(rows, cols, vals, tau, d,
         q = 2.0 * y_new - v
 
         # ── Step 2b: project (p, q) onto V ───────────────────────────────────
-        p, q = project_V(p, q)
+        p, q = _project_V_inplace(p, q)
 
         # ── s = γ⁻¹(z̃ - x̃): needs old u, v before dual update ──────────────
         do_diag = (it + 1) % diag_every == 0
@@ -402,12 +400,12 @@ def dr_splitting(rows, cols, vals, tau, d,
         # ── Diagnostics and convergence check ────────────────────────────────
         if do_diag:
             # Primal: r_p = Π_V(x̃) - x̃,  scale by max{‖x̃‖, 1}
-            x_proj, y_proj = project_V(x_new.copy(), y_new)
+            x_proj, y_proj = _project_V_inplace(x_new.copy(), y_new)
             r_primal = norm_xy(x_proj - x_new, y_proj - y_new)
             scale_p  = max(norm_xy(x_new, y_new), 1.0)
 
             # Dual: r_d = -Π_V(s̃),  scale by max{‖s̃‖, 1}
-            s_x_proj, s_y_proj = project_V(s_x.copy(), s_y)
+            s_x_proj, s_y_proj = _project_V_inplace(s_x.copy(), s_y)
             r_dual  = norm_xy(s_x_proj, s_y_proj)
             scale_d = max(norm_xy(s_x, s_y), 1.0)
 

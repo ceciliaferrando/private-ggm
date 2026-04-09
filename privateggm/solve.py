@@ -13,7 +13,6 @@ from .solvers.ipm_chol import ipm_chol
 from .solvers.ipm_chol_sparse import ipm_chol_sparse
 from .solvers.pgd_maxent import pgd, pgd_maxent
 from .solvers.dr_splitting import dr_splitting
-from .solvers.clarabel import clarabel_solver
 
 _SOLVER_REGISTRY = {
     'ipm_chol': ipm_chol,
@@ -21,8 +20,13 @@ _SOLVER_REGISTRY = {
     'pgd': pgd,
     'pgd_maxent': pgd_maxent,
     'dr_splitting': dr_splitting,
-    'clarabel': clarabel_solver,
 }
+
+try:
+    from .solvers.clarabel import clarabel_solver
+    _SOLVER_REGISTRY['clarabel'] = clarabel_solver
+except ImportError:
+    pass
 
 
 def _get_solver_fn(solver):

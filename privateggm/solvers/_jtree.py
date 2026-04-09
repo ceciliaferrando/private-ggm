@@ -149,6 +149,11 @@ def obs_routing(jtree, obs_rows, obs_cols):
                 local_rows[idx] = lr
                 local_cols[idx] = lc
                 break
+        else:
+            raise ValueError(
+                f"Observation ({r}, {c}) not covered by any clique in the junction tree. "
+                "This indicates a bug in triangulation or obs_routing."
+            )
 
     return clique_idx, local_rows, local_cols
 

@@ -13,7 +13,7 @@ from ._shared import project_psd, _weights, _weighted_obj, normalize_coo
 
 
 def pgd(rows, cols, vals, tau, d,
-        eta=0.1, max_iters=2000, eps=1e-8, min_eig=1e-8, track_kkt=False):
+        eta=0.1, max_iters=2000, eps=1e-8, track_kkt=False):
     """
     Stage A: Projected Gradient Descent onto the PSD cone.
 
@@ -55,7 +55,7 @@ def pgd(rows, cols, vals, tau, d,
     beta   = 0.5
     gamma  = 1.05
 
-    X    = project_psd(A.copy(), min_eig=min_eig)
+    X    = project_psd(A.copy())
     hist = []
     t0   = time.perf_counter()
 
@@ -66,7 +66,7 @@ def pgd(rows, cols, vals, tau, d,
 
         # Armijo backtracking line search for PGD
         for _ in range(50):
-            X_new, evals_new = project_psd(X - eta * G, return_evals=True, min_eig=min_eig)
+            X_new, evals_new = project_psd(X - eta * G, return_evals=True)
             predicted_decrease = -np.sum(G * (X_new - X))
             if _weighted_obj(X_new, rows, cols, vals, w) <= obj - armijo * predicted_decrease:
                 break
@@ -100,7 +100,7 @@ def pgd(rows, cols, vals, tau, d,
 def pgd_maxent(rows, cols, vals, tau, d,
                eta=0.1, pgd_iters=2000, pgd_eps=1e-8,
                lbfgs_iters=1000, eps=1e-8,
-               min_eig=1e-8, track_kkt=False):
+               track_kkt=False):
     """
     Two-stage pipeline: Stage A PGD then Stage B max-entropy completion.
 
@@ -118,7 +118,6 @@ def pgd_maxent(rows, cols, vals, tau, d,
     pgd_eps     : Stage A convergence tolerance on step size
     lbfgs_iters : Stage B max L-BFGS iterations
     eps         : Stage B L-BFGS gradient tolerance
-    min_eig     : minimum eigenvalue threshold for PSD projection
     track_kkt   : if True, add KKT diagnostics to Stage A hist entries
 
     Returns
@@ -137,7 +136,7 @@ def pgd_maxent(rows, cols, vals, tau, d,
 
     t0    = time.perf_counter()
     X_psd, hist = pgd(rows, cols, vals, tau, d, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
-                      min_eig=min_eig, track_kkt=track_kkt)
+                      track_kkt=track_kkt)
     for entry in hist:
         entry['stage'] = 'A'
 
@@ -151,6 +150,9 @@ def pgd_maxent(rows, cols, vals, tau, d,
         K[cols, rows] = z
         return K
 
+    # Mutable cell so loss_and_grad can share Sigma with the callback.
+    _last = [None, None]   # [logdet_K, Sigma]
+
     def loss_and_grad(z):
         K = _build_K(z)
         try:
@@ -160,20 +162,22 @@ def pgd_maxent(rows, cols, vals, tau, d,
             K_reg = K + shift * np.eye(d)
             Sigma_reg = np.linalg.inv(K_reg)
             grad = mult * (X_psd[rows, cols] - Sigma_reg[rows, cols])
+            _last[0] = None
+            _last[1] = None
             return 1e15, grad
         logdet_K = 2.0 * np.sum(np.log(np.diag(L)))
         Sigma = np.linalg.solve(L.T, np.linalg.solve(L, np.eye(d)))
+        _last[0] = logdet_K
+        _last[1] = Sigma
         loss  = -logdet_K + np.sum(K * X_psd)
         grad  = mult * (X_psd[rows, cols] - Sigma[rows, cols])
         return float(loss), grad
 
     def callback(z):
-        K = _build_K(z)
-        sign, logdet_K = np.linalg.slogdet(K)
-        if sign <= 0:
+        logdet_K, Sigma = _last
+        if logdet_K is None:
             return
-        Sigma = np.linalg.inv(K)
-        grad  = mult * (X_psd[rows, cols] - Sigma[rows, cols])
+        grad = mult * (X_psd[rows, cols] - Sigma[rows, cols])
         hist.append({
             'time':             time.perf_counter() - t0,
             'obj':              _weighted_obj(Sigma, rows, cols, vals, w),
@@ -192,6 +196,12 @@ def pgd_maxent(rows, cols, vals, tau, d,
         options={'maxiter': lbfgs_iters, 'ftol': 0, 'gtol': eps},
     )
 
-    K_opt     = _build_K(result.x)
-    Sigma_hat = np.linalg.inv(K_opt)
+    K_opt = _build_K(result.x)
+    try:
+        Sigma_hat = np.linalg.inv(K_opt)
+    except np.linalg.LinAlgError:
+        raise np.linalg.LinAlgError(
+            "Stage B precision matrix K is singular at convergence. "
+            "This typically means Stage B diverged near the PSD boundary."
+        )
     return Sigma_hat, hist

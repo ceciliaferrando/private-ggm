@@ -416,6 +416,9 @@ def ipm_chol_sparse(rows, cols, vals, tau, d,
     X_hat : (d, d) ndarray — estimated covariance
     hist  : list of per-outer-iteration dicts with keys:
                 time, obj, entropy, mu, inner_iters
+            Note: KKT diagnostic fields (min_eig_G, comp_slack) present in
+            ipm_chol are omitted here because the sparse model does not
+            assemble the full d×d gradient matrix G.
     """
     rows, cols, vals, tau = normalize_coo(rows, cols, vals, tau)
     obs_rows = rows
