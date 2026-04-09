@@ -12,7 +12,7 @@ from scipy.optimize import minimize
 from ._shared import project_psd, _weights, _weighted_obj
 
 
-def pgd(A, inds, tau, eta=0.1, max_iters=2000, eps=1e-8, track_kkt=False):
+def pgd(A, inds, tau, eta=0.1, max_iters=2000, eps=1e-8, min_eig=1e-8,track_kkt=False):
     """
     Stage A: Projected Gradient Descent onto the PSD cone.
 
@@ -45,7 +45,7 @@ def pgd(A, inds, tau, eta=0.1, max_iters=2000, eps=1e-8, track_kkt=False):
     beta   = 0.5
     gamma  = 1.05
 
-    X    = project_psd(A.copy())
+    X    = project_psd(A.copy(), min_eig=min_eig)
     hist = []
     t0   = time.perf_counter()
 
@@ -56,7 +56,7 @@ def pgd(A, inds, tau, eta=0.1, max_iters=2000, eps=1e-8, track_kkt=False):
 
         # Armijo backtracking line search for PGD
         for _ in range(50):
-            X_new, evals_new = project_psd(X - eta * G, return_evals=True)
+            X_new, evals_new = project_psd(X - eta * G, return_evals=True, min_eig=min_eig)
             predicted_decrease = -np.sum(G * (X_new - X))
             if _weighted_obj(X_new, A, inds, w) <= obj - armijo * predicted_decrease:
                 break
@@ -89,8 +89,8 @@ def pgd(A, inds, tau, eta=0.1, max_iters=2000, eps=1e-8, track_kkt=False):
 
 def pgd_maxent(A, inds, tau,
                eta=0.1, pgd_iters=2000, pgd_eps=1e-8,
-               lbfgs_iters=500, eps=1e-8,
-               track_kkt=False):
+               lbfgs_iters=1000, eps=1e-8,
+               min_eig=1e-8, track_kkt=False):
     """
     Two-stage pipeline: Stage A PGD then Stage B max-entropy completion.
 
@@ -104,6 +104,7 @@ def pgd_maxent(A, inds, tau,
     pgd_eps     : Stage A convergence tolerance on step size
     lbfgs_iters : Stage B max L-BFGS iterations
     eps         : Stage B L-BFGS gradient tolerance
+    min_eig     : minimum eigenvalue threshold for PSD projection
     track_kkt   : if True, add KKT diagnostics to Stage A hist entries
 
     Returns
@@ -124,7 +125,7 @@ def pgd_maxent(A, inds, tau,
 
     t0    = time.perf_counter()
     X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
-                      track_kkt=track_kkt)
+                      min_eig=min_eig, track_kkt=track_kkt)
     for entry in hist:
         entry['stage'] = 'A'
 

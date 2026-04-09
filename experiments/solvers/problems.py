@@ -48,7 +48,7 @@ TAU = {
 }
 
 
-def make_problem(d=32, noise_level='med', seed=42, fraction_offdiag=0.2):
+def make_problem(d=32, noise_level='med', tau_diag=None, seed=42, fraction_offdiag=0.2):
     """Generate a random covariance estimation problem.
 
     Parameters
@@ -62,7 +62,9 @@ def make_problem(d=32, noise_level='med', seed=42, fraction_offdiag=0.2):
     -------
     dict with keys: Sigma_true, A, inds, tau, d, noise_level, seed
     """
-    tau_diag = TAU[noise_level]
+
+    # Set tau_diag based on noise_level if not provided
+    tau_diag = TAU[noise_level] if tau_diag is None else tau_diag
 
     rng = np.random.default_rng(seed)
     Q, _ = np.linalg.qr(rng.standard_normal((d, d)))

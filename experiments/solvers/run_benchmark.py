@@ -34,20 +34,24 @@ import time
 
 import numpy as np
 
-# Add experiments/ dir (for problems.py) and project root (for privateggm/)
+# Add solvers/ dir (for problems.py) and project root (for privateggm/)
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _HERE)
-sys.path.insert(0, os.path.dirname(_HERE))
+sys.path.insert(0, os.path.dirname(os.path.dirname(_HERE)))
 
 from problems import PROBLEMS, make_problem
 from privateggm.solvers import pgd, pgd_maxent, ipm_chol
 from privateggm.solvers import clarabel_solver
+from privateggm.solvers.ipm_chol_sparse import ipm_chol_sparse
+from privateggm.solvers.dr_splitting import dr_splitting
 
 ALL_SOLVERS = [
     ('pgd',             pgd),
     ('pgd_maxent',      pgd_maxent),
     ('ipm_chol',        ipm_chol),
+    ('ipm_chol_sparse', ipm_chol_sparse),
     ('clarabel',        clarabel_solver),
+    ('dr_splitting',    dr_splitting),
 ]
 
 def run_all(solvers, problems=PROBLEMS):

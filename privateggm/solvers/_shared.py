@@ -3,10 +3,16 @@
 import numpy as np
 
 
-def project_psd(X, thresh=1e-8, return_evals=False):
-    """Project X to the PSD cone by clipping eigenvalues to thresh."""
+def project_psd(X, min_eig=0.0, thresh=1e-8, return_evals=False):
+    """Project X onto {X : X ⪽ min_eig·I} by clipping eigenvalues.
+
+    Parameters
+    ----------
+    min_eig : float — minimum eigenvalue to enforce (default 0.0)
+    thresh  : float — numerical floor applied on top of min_eig (default 1e-8)
+    """
     vals, vecs = np.linalg.eigh(X)
-    vals_c = np.maximum(vals, thresh)
+    vals_c = np.maximum(vals, max(thresh, min_eig))
     X_proj = vecs @ np.diag(vals_c) @ vecs.T
     return (X_proj, vals_c) if return_evals else X_proj
 

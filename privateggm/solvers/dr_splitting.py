@@ -20,14 +20,12 @@ problems", SIAM J. Matrix Anal. Appl., 36(4), 2015.
 """
 
 import functools
-import itertools
 import time
-from dataclasses import dataclass
 
-import networkx as nx
 import numpy as np
 
 from ._shared import _weights, project_psd
+from ._jtree import JunctionTree, build_jtree  # noqa: F401 (re-exported for callers)
 
 
 # ── vec / unvec ───────────────────────────────────────────────────────────────
@@ -69,182 +67,6 @@ def unvec(v, s, rows=None, cols=None):
     Y[c, r] = v
     return Y
 
-
-# ── Junction tree ─────────────────────────────────────────────────────────────
-
-@dataclass
-class JunctionTree:
-    """Junction tree of a chordal graph.
-
-    Cliques are stored in BFS traversal order from the root (cliques[0]).
-    This guarantees parents[j] < j for all j > 0, so a root-to-leaves pass
-    is forward iteration and a leaves-to-root pass is reverse iteration.
-
-    Fields
-    ------
-    cliques : list of sorted int arrays — maximal cliques, traversal order
-    parents : list — parents[0] = None; parents[j] = int index for j > 0
-    seps    : list of int arrays — seps[j] = global node indices of separator
-              between cliques[j] and its parent; seps[0] = empty array
-    edges   : (rows, cols) — upper-tri entries of the chordal extension
-    """
-    cliques : list
-    parents : list
-    seps    : list
-    edges   : tuple
-
-    @property
-    def clique_sizes(self):
-        return [len(c) for c in self.cliques]
-
-
-def get_elim_order_cholmod(rows, cols, d):
-    """Fill-reducing elimination ordering via CHOLMOD AMD (symbolic analysis only).
-
-    Parameters
-    ----------
-    rows, cols : (m,) int arrays — observed index pairs
-    d          : int — matrix dimension
-
-    Returns
-    -------
-    elim_order : (d,) int array — elim_order[step] = variable eliminated at that step
-    """
-    import scipy.sparse as sp
-    from sksparse.amd import amd
-
-    off = rows != cols
-    r, c = rows[off].astype(int), cols[off].astype(int)
-    A = sp.csc_matrix((np.ones(len(r), dtype=np.int8), (r, c)), shape=(d, d))
-    return amd(A).astype(int)
-
-
-def get_elim_order_nx(rows, cols, d):
-    """Perfect elimination ordering via networkx MCS-M triangulation.
-
-    Parameters
-    ----------
-    rows, cols : (m,) int arrays — observed index pairs
-    d          : int — matrix dimension
-
-    Returns
-    -------
-    elim_order : (d,) int array — elim_order[step] = variable eliminated at that step
-    """
-    G = nx.Graph()
-    G.add_nodes_from(range(d))
-    for r, c in zip(rows, cols):
-        if r != c:
-            G.add_edge(int(r), int(c))
-    _, alpha = nx.complete_to_chordal_graph(G)
-    # alpha[v] = position of v in the ordering (0 = eliminated first)
-    return np.array(sorted(range(d), key=lambda v: alpha[v]), dtype=int)
-
-
-def triangulate(rows, cols, d, elim_order):
-    """Triangulate a graph by simulating variable elimination.
-
-    Adds fill edges to make the graph chordal under the given ordering.
-
-    Parameters
-    ----------
-    rows, cols : (m,) int arrays — observed index pairs
-    d          : int — matrix dimension
-    elim_order : (d,) int array — variable elimination order
-
-    Returns
-    -------
-    H : nx.Graph — chordal graph (original edges + fill-in)
-    """
-    H = nx.Graph()
-    H.add_nodes_from(range(d))
-    H.add_edges_from((int(r), int(c)) for r, c in zip(rows, cols) if r != c)
-
-    eliminated = np.zeros(d, dtype=bool)
-    for v in elim_order:
-        v = int(v)
-        neighbors = [u for u in H.neighbors(v) if not eliminated[u]]
-        for u, w in itertools.combinations(neighbors, 2):
-            if not H.has_edge(u, w):
-                H.add_edge(u, w)
-        eliminated[v] = True
-
-    return H
-
-
-def build_jtree(rows, cols, d, elim_order=None):
-    """Build a JunctionTree from a sparsity pattern.
-
-    Triangulates the graph under the given elimination ordering, finds maximal
-    cliques, and builds the junction tree via maximum spanning tree.
-
-    Parameters
-    ----------
-    rows, cols : (m,) int arrays — observed index pairs
-    d          : int — matrix dimension
-    elim_order : (d,) int array — elimination ordering; default is CHOLMOD AMD
-
-    Returns
-    -------
-    JunctionTree
-    """
-    if elim_order is None:
-        elim_order = get_elim_order_cholmod(rows, cols, d)
-
-    H       = triangulate(rows, cols, d, elim_order)
-    cliques = [np.array(sorted(c), dtype=int) for c in nx.find_cliques(H)]
-    K       = len(cliques)
-
-    # Chordal extension edges: diagonal + upper-tri of H
-    H.add_edges_from((i, i) for i in range(d))
-    pairs = sorted((min(u,v), max(u,v)) for u, v in H.edges())
-    rows, cols = zip(*pairs)
-    edges = (np.array(rows, dtype=int), np.array(cols, dtype=int))
-
-    if K == 1:
-        return JunctionTree(
-            cliques = cliques,
-            parents = [None],
-            seps    = [np.array([], dtype=int)],
-            edges   = edges,
-        )
-
-    # Junction tree via maximum spanning tree of clique-intersection graph.
-    # All K nodes are added explicitly so isolated cliques (variables with no
-    # off-diagonal observations) are still included in the spanning tree.
-    CG = nx.Graph()
-    CG.add_nodes_from(range(K))
-    for i in range(K):
-        for j in range(i + 1, K):
-            sep = np.intersect1d(cliques[i], cliques[j])
-            if len(sep) > 0:
-                CG.add_edge(i, j, weight=len(sep))
-    # Connect any component not containing node 0 so the spanning tree covers all K cliques.
-    # This handles variables with no off-diagonal observations (singleton cliques).
-    for component in nx.connected_components(CG):
-        if 0 not in component:
-            CG.add_edge(0, min(component), weight=0)
-
-    # Get BFS tree and reorder cliques in tree order
-    T    = nx.bfs_tree(nx.maximum_spanning_tree(CG), 0)
-    topo = list(nx.topological_sort(T))
-    rank = {v: i for i, v in enumerate(topo)}
-
-    cliques = [cliques[v] for v in topo]
-    T       = nx.relabel_nodes(T, rank)   # now T's nodes are 0..K-1 in topo order
-
-    parents = [None] * K
-    seps    = [np.array([], dtype=int)] * K
-    for j in range(1, K):
-        parents[j] = next(T.predecessors(j))  # guaranteed < j by topo order
-        seps[j]    = np.intersect1d(cliques[j], cliques[parents[j]])
-
-    return JunctionTree(
-        cliques = cliques,
-        parents = parents,
-        seps    = seps,
-        edges   = edges,
-    )
 
 
 # ── Entropy ───────────────────────────────────────────────────────────────────
@@ -463,7 +285,8 @@ def dr_splitting(A, inds, tau,
                  gamma=1.0, rho=1.0,
                  max_iters=5000, eps_abs=1e-5,
                  diag_every=25,
-                 elim_order=None):
+                 elim_order=None,
+                 min_eig=0.0):
     """Douglas-Rachford splitting for the sparse PSD-nearness problem.
 
     Parameters
@@ -525,11 +348,12 @@ def dr_splitting(A, inds, tau,
     t0   = time.perf_counter()
 
     def prox_psd(y):
-        """Project all clique submatrices of flat y onto the PSD cone."""
+        """Project all clique submatrices of flat y onto {X : X ⪽ min_eig·I}."""
         y_new = y.copy()
-        y_new[size_one_inds] = np.maximum(y[size_one_inds], _thresh)
+        y_new[size_one_inds] = np.maximum(y[size_one_inds], max(_thresh, min_eig))
         for k in large_clique_ks:
-            y_new[y_slices[k]] = vec(project_psd(unvec(y[y_slices[k]], clique_sizes[k])))
+            y_new[y_slices[k]] = vec(project_psd(unvec(y[y_slices[k]], clique_sizes[k]),
+                                                  min_eig=min_eig))
         return y_new
 
     def project_V(x, y):
