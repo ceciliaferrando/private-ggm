@@ -9,10 +9,11 @@ import time
 import numpy as np
 from scipy.optimize import minimize
 
-from ._shared import project_psd, _weights, _weighted_obj
+from ._shared import project_psd, _weights, _weighted_obj, normalize_coo
 
 
-def pgd(A, inds, tau, eta=0.1, max_iters=2000, eps=1e-8, track_kkt=False):
+def pgd(rows, cols, vals, tau, d,
+        eta=0.1, max_iters=2000, eps=1e-8, track_kkt=False):
     """
     Stage A: Projected Gradient Descent onto the PSD cone.
 
@@ -21,11 +22,15 @@ def pgd(A, inds, tau, eta=0.1, max_iters=2000, eps=1e-8, track_kkt=False):
 
     Parameters
     ----------
-    eta       : initial step size
-    max_iters : maximum PGD iterations
-    eps       : convergence tolerance on step size ‖X_new − X‖_F
-    track_kkt : if True, record min_eig_X, min_eig_G, comp_slack each iter
-                (adds one eigendecomposition per step — disable for speed)
+    rows, cols : (m,) int arrays — observed index pairs (any triangular format)
+    vals       : (m,) float array — noisy observed values
+    tau        : (m,) float array — noise std-devs
+    d          : int — matrix dimension
+    eta        : initial step size
+    max_iters  : maximum PGD iterations
+    eps        : convergence tolerance on step size ‖X_new − X‖_F
+    track_kkt  : if True, record min_eig_X, min_eig_G, comp_slack each iter
+                 (adds one eigendecomposition per step — disable for speed)
 
     Hist fields
     -----------
@@ -33,12 +38,17 @@ def pgd(A, inds, tau, eta=0.1, max_iters=2000, eps=1e-8, track_kkt=False):
     PGD     : delta (‖X_new − X‖_F), eta (step size)
     KKT     : min_eig_X, min_eig_G, comp_slack  (only if track_kkt=True)
     """
-    d = A.shape[0]
+    rows, cols, vals, tau = normalize_coo(rows, cols, vals, tau)
     w = _weights(tau)
 
+    # Build local dense A for initialization and gradient computation
+    A = np.zeros((d, d))
+    A[rows, cols] = vals
+    A[cols, rows] = vals
+
     W = np.zeros((d, d))
-    W[inds[:, 0], inds[:, 1]] = w
-    W[inds[:, 1], inds[:, 0]] = w
+    W[rows, cols] = w
+    W[cols, rows] = w
     mask = W > 0
 
     armijo = 0.5
@@ -52,13 +62,13 @@ def pgd(A, inds, tau, eta=0.1, max_iters=2000, eps=1e-8, track_kkt=False):
     for _ in range(max_iters):
         G   = np.where(mask, W * (X - A), 0.0)
         G[np.arange(d), np.arange(d)] *= 2
-        obj = _weighted_obj(X, A, inds, w)
+        obj = _weighted_obj(X, rows, cols, vals, w)
 
         # Armijo backtracking line search for PGD
         for _ in range(50):
             X_new, evals_new = project_psd(X - eta * G, return_evals=True)
             predicted_decrease = -np.sum(G * (X_new - X))
-            if _weighted_obj(X_new, A, inds, w) <= obj - armijo * predicted_decrease:
+            if _weighted_obj(X_new, rows, cols, vals, w) <= obj - armijo * predicted_decrease:
                 break
             eta *= beta
             if eta < 1e-14:
@@ -87,9 +97,9 @@ def pgd(A, inds, tau, eta=0.1, max_iters=2000, eps=1e-8, track_kkt=False):
     return X, hist
 
 
-def pgd_maxent(A, inds, tau,
+def pgd_maxent(rows, cols, vals, tau, d,
                eta=0.1, pgd_iters=2000, pgd_eps=1e-8,
-               lbfgs_iters=500, eps=1e-8,
+               lbfgs_iters=1000, eps=1e-8,
                track_kkt=False):
     """
     Two-stage pipeline: Stage A PGD then Stage B max-entropy completion.
@@ -99,6 +109,10 @@ def pgd_maxent(A, inds, tau,
 
     Parameters
     ----------
+    rows, cols  : (m,) int arrays — observed index pairs (any triangular format)
+    vals        : (m,) float array — noisy observed values
+    tau         : (m,) float array — noise std-devs
+    d           : int — matrix dimension
     eta         : Stage A initial step size
     pgd_iters   : Stage A max PGD iterations
     pgd_eps     : Stage A convergence tolerance on step size
@@ -117,13 +131,11 @@ def pgd_maxent(A, inds, tau,
     Stage A : delta, eta  (+ min_eig_X, min_eig_G, comp_slack if track_kkt)
     Stage B : dual_loss, constraint_viol, grad_norm  (dual-domain diagnostics)
     """
-    d    = A.shape[0]
+    rows, cols, vals, tau = normalize_coo(rows, cols, vals, tau)
     w    = _weights(tau)
-    rows = inds[:, 0]
-    cols = inds[:, 1]
 
     t0    = time.perf_counter()
-    X_psd, hist = pgd(A, inds, tau, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
+    X_psd, hist = pgd(rows, cols, vals, tau, d, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
                       track_kkt=track_kkt)
     for entry in hist:
         entry['stage'] = 'A'
@@ -138,6 +150,9 @@ def pgd_maxent(A, inds, tau,
         K[cols, rows] = z
         return K
 
+    # Mutable cell so loss_and_grad can share Sigma with the callback.
+    _last = [None, None]   # [logdet_K, Sigma]
+
     def loss_and_grad(z):
         K = _build_K(z)
         try:
@@ -147,23 +162,25 @@ def pgd_maxent(A, inds, tau,
             K_reg = K + shift * np.eye(d)
             Sigma_reg = np.linalg.inv(K_reg)
             grad = mult * (X_psd[rows, cols] - Sigma_reg[rows, cols])
+            _last[0] = None
+            _last[1] = None
             return 1e15, grad
         logdet_K = 2.0 * np.sum(np.log(np.diag(L)))
         Sigma = np.linalg.solve(L.T, np.linalg.solve(L, np.eye(d)))
+        _last[0] = logdet_K
+        _last[1] = Sigma
         loss  = -logdet_K + np.sum(K * X_psd)
         grad  = mult * (X_psd[rows, cols] - Sigma[rows, cols])
         return float(loss), grad
 
     def callback(z):
-        K = _build_K(z)
-        sign, logdet_K = np.linalg.slogdet(K)
-        if sign <= 0:
+        logdet_K, Sigma = _last
+        if logdet_K is None:
             return
-        Sigma = np.linalg.inv(K)
-        grad  = mult * (X_psd[rows, cols] - Sigma[rows, cols])
+        grad = mult * (X_psd[rows, cols] - Sigma[rows, cols])
         hist.append({
             'time':             time.perf_counter() - t0,
-            'obj':              _weighted_obj(Sigma, A, inds, w),
+            'obj':              _weighted_obj(Sigma, rows, cols, vals, w),
             'entropy':          float(-logdet_K),
             'dual_loss':        float(-logdet_K + np.sum(_build_K(z) * X_psd)),
             'constraint_viol':  float(np.sqrt(np.mean((Sigma[rows, cols] - X_psd[rows, cols]) ** 2))),
@@ -179,6 +196,12 @@ def pgd_maxent(A, inds, tau,
         options={'maxiter': lbfgs_iters, 'ftol': 0, 'gtol': eps},
     )
 
-    K_opt     = _build_K(result.x)
-    Sigma_hat = np.linalg.inv(K_opt)
+    K_opt = _build_K(result.x)
+    try:
+        Sigma_hat = np.linalg.inv(K_opt)
+    except np.linalg.LinAlgError:
+        raise np.linalg.LinAlgError(
+            "Stage B precision matrix K is singular at convergence. "
+            "This typically means Stage B diverged near the PSD boundary."
+        )
     return Sigma_hat, hist

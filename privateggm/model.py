@@ -925,23 +925,23 @@ class IterativePrivateGGM:
         
         if self.optimizer == "pgd_maxent_solver":
             inds = get_observed_Sigma_entries(self.Sigma_tilde)
-            # Extract noise scales only at observed indices for the solver
-            tau = noise_scales_array[inds[:, 0], inds[:, 1]]
-            
+            rows, cols = inds[:, 0], inds[:, 1]
+            vals = self.Sigma_tilde[rows, cols]
+            tau  = noise_scales_array[rows, cols]
+
             Sigma_hat, convergence_hist = pgd_maxent_solver(
-                self.Sigma_tilde, inds, tau,
+                rows, cols, vals, tau, self.d,
                 eta=0.1, pgd_iters=2000, pgd_eps=1e-8,
                 lbfgs_iters=1000, eps=1e-8,
                 track_kkt=False
             )
-            
-            # Store convergence info for this iteration
+
             if not hasattr(self, 'convergence_history'):
                 self.convergence_history = []
             self.convergence_history.append({'solver': 'pgd_maxent_solver', 'hist': convergence_hist})
-            
+
             return Sigma_hat
-        
+
         elif self.optimizer == "pgd-maxent":
             # Old pgd_maxent from model.py
             inds = get_observed_Sigma_entries(self.Sigma_tilde)
@@ -949,30 +949,29 @@ class IterativePrivateGGM:
                 self.Sigma_tilde, inds, noise_scales=noise_scales_array,
                 max_iters=5000, eta=0.1, tol=1e-8, verbose=False
             )
-            
-            # Store convergence info for this iteration
+
             if not hasattr(self, 'convergence_history'):
                 self.convergence_history = []
             self.convergence_history.append({'solver': 'pgd_maxent_model', 'hist': convergence_hist})
-            
+
             return Sigma_hat
-        
+
         elif self.optimizer == "ipm_chol":
             inds = get_observed_Sigma_entries(self.Sigma_tilde)
-            # Extract noise scales only at observed indices for the solver
-            tau = noise_scales_array[inds[:, 0], inds[:, 1]]
-            
+            rows, cols = inds[:, 0], inds[:, 1]
+            vals = self.Sigma_tilde[rows, cols]
+            tau  = noise_scales_array[rows, cols]
+
             Sigma_hat, convergence_hist = ipm_chol(
-                self.Sigma_tilde, inds, tau,
+                rows, cols, vals, tau, self.d,
                 mu_init=1.0, mu_factor=0.5, eps=1e-8,
                 max_outer=40, max_inner=200
             )
-            
-            # Store convergence info
+
             if not hasattr(self, 'convergence_history'):
                 self.convergence_history = []
             self.convergence_history.append({'solver': 'ipm_chol_solver', 'hist': convergence_hist})
-            
+
             return Sigma_hat
         
         elif self.optimizer == "lbfgs":
@@ -1307,28 +1306,27 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
         
         if self.optimizer == "pgd_maxent_solver":
             inds = get_observed_Sigma_entries(self.Sigma_tilde)
-            # Extract noise scales only at observed indices for the solver
-            tau = noise_scales_array[inds[:, 0], inds[:, 1]]
-            
+            rows, cols = inds[:, 0], inds[:, 1]
+            vals = self.Sigma_tilde[rows, cols]
+            tau  = noise_scales_array[rows, cols]
+
             Sigma_hat, convergence_hist = pgd_maxent_solver(
-                self.Sigma_tilde, inds, tau,
+                rows, cols, vals, tau, self.d,
                 eta=0.1, pgd_iters=2000, pgd_eps=1e-8,
                 lbfgs_iters=1000, eps=1e-8,
                 track_kkt=False
             )
-            
-            # Store convergence info for this round
+
             if not hasattr(self, 'convergence_history'):
                 self.convergence_history = []
             self.convergence_history.append({'solver': 'pgd_maxent_solver', 'hist': convergence_hist})
-            
-            # Check if pgd_maxent returned NaN/inf
+
             if np.any(np.isnan(Sigma_hat)) or np.any(np.isinf(Sigma_hat)):
                 print("WARNING: pgd_maxent returned NaN/inf - keeping previous estimate")
                 return self.Sigma_hat
-            
+
             return Sigma_hat
-        
+
         elif self.optimizer == "pgd-maxent":
             # Old pgd_maxent from model.py
             inds = get_observed_Sigma_entries(self.Sigma_tilde)
@@ -1336,38 +1334,37 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
                 self.Sigma_tilde, inds, noise_scales=noise_scales_array,
                 max_iters=5000, eta=0.1, tol=1e-8, verbose=False
             )
-            
-            # Store convergence info
+
             if not hasattr(self, 'convergence_history'):
                 self.convergence_history = []
             self.convergence_history.append({'solver': 'pgd_maxent_model', 'hist': convergence_hist})
-            
+
             if np.any(np.isnan(Sigma_hat)) or np.any(np.isinf(Sigma_hat)):
                 print("WARNING: pgd-maxent (model.py) returned NaN/inf - keeping previous estimate")
                 return self.Sigma_hat
-            
+
             return Sigma_hat
-        
+
         elif self.optimizer == "ipm_chol":
             inds = get_observed_Sigma_entries(self.Sigma_tilde)
-            # Extract noise scales only at observed indices for the solver
-            tau = noise_scales_array[inds[:, 0], inds[:, 1]]
-            
+            rows, cols = inds[:, 0], inds[:, 1]
+            vals = self.Sigma_tilde[rows, cols]
+            tau  = noise_scales_array[rows, cols]
+
             Sigma_hat, convergence_hist = ipm_chol(
-                self.Sigma_tilde, inds, tau,
+                rows, cols, vals, tau, self.d,
                 mu_init=1.0, mu_factor=0.5, eps=1e-8,
                 max_outer=40, max_inner=200
             )
-            
-            # Store convergence info
+
             if not hasattr(self, 'convergence_history'):
                 self.convergence_history = []
             self.convergence_history.append({'solver': 'ipm_chol_solver', 'hist': convergence_hist})
-            
+
             if np.any(np.isnan(Sigma_hat)) or np.any(np.isinf(Sigma_hat)):
                 print("WARNING: ipm_chol returned NaN/inf - keeping previous estimate")
                 return self.Sigma_hat
-            
+
             return Sigma_hat
         
         elif self.optimizer == "lbfgs":
