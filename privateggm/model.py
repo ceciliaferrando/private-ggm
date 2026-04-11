@@ -14,6 +14,7 @@ from privateggm.privacy import gaussian_mechanism, exponential_mechanism, cov_jk
 
 # Import optimized solvers
 from privateggm.solvers import pgd_maxent as pgd_maxent_solver, ipm_chol
+from privateggm.solve import solve as ggm_solve
 
 # DEBUG_MODE = True
 
@@ -929,8 +930,8 @@ class IterativePrivateGGM:
             vals = self.Sigma_tilde[rows, cols]
             tau  = noise_scales_array[rows, cols]
 
-            Sigma_hat, convergence_hist = pgd_maxent_solver(
-                rows, cols, vals, tau, self.d,
+            Sigma_hat, convergence_hist = ggm_solve(
+                rows, cols, vals, tau, self.d, solver='pgd_maxent',
                 eta=0.1, pgd_iters=2000, pgd_eps=1e-8,
                 lbfgs_iters=1000, eps=1e-8,
                 track_kkt=False
@@ -943,7 +944,7 @@ class IterativePrivateGGM:
             return Sigma_hat
 
         elif self.optimizer == "pgd-maxent":
-            # Old pgd_maxent from model.py
+            # Old pgd_maxent from model.py (dense, no component decomposition)
             inds = get_observed_Sigma_entries(self.Sigma_tilde)
             Sigma_hat, convergence_hist = pgd_maxent(
                 self.Sigma_tilde, inds, noise_scales=noise_scales_array,
@@ -962,8 +963,8 @@ class IterativePrivateGGM:
             vals = self.Sigma_tilde[rows, cols]
             tau  = noise_scales_array[rows, cols]
 
-            Sigma_hat, convergence_hist = ipm_chol(
-                rows, cols, vals, tau, self.d,
+            Sigma_hat, convergence_hist = ggm_solve(
+                rows, cols, vals, tau, self.d, solver='ipm_chol',
                 mu_init=1.0, mu_factor=0.5, eps=1e-8,
                 max_outer=40, max_inner=200
             )
@@ -1310,8 +1311,8 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
             vals = self.Sigma_tilde[rows, cols]
             tau  = noise_scales_array[rows, cols]
 
-            Sigma_hat, convergence_hist = pgd_maxent_solver(
-                rows, cols, vals, tau, self.d,
+            Sigma_hat, convergence_hist = ggm_solve(
+                rows, cols, vals, tau, self.d, solver='pgd_maxent',
                 eta=0.1, pgd_iters=2000, pgd_eps=1e-8,
                 lbfgs_iters=1000, eps=1e-8,
                 track_kkt=False
@@ -1328,7 +1329,7 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
             return Sigma_hat
 
         elif self.optimizer == "pgd-maxent":
-            # Old pgd_maxent from model.py
+            # Old pgd_maxent from model.py (dense, no component decomposition)
             inds = get_observed_Sigma_entries(self.Sigma_tilde)
             Sigma_hat, convergence_hist = pgd_maxent(
                 self.Sigma_tilde, inds, noise_scales=noise_scales_array,
@@ -1351,8 +1352,8 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
             vals = self.Sigma_tilde[rows, cols]
             tau  = noise_scales_array[rows, cols]
 
-            Sigma_hat, convergence_hist = ipm_chol(
-                rows, cols, vals, tau, self.d,
+            Sigma_hat, convergence_hist = ggm_solve(
+                rows, cols, vals, tau, self.d, solver='ipm_chol',
                 mu_init=1.0, mu_factor=0.5, eps=1e-8,
                 max_outer=40, max_inner=200
             )
