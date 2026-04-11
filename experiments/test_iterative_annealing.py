@@ -271,6 +271,20 @@ def run_experiment(
                     Sigma_for_ssp = X_trial.T @ X_trial / (n_tr - 1)  # second moment, X_trial already centered with mu_dp
                     print(f"  Private mean: rho_mean={rho_mean}, rho_cov={rho_cov}, "
                           f"mean_noise_scale={mean_noise_scale:.4e}")
+                elif private_mean and not regression:
+                    # Covariance-only private mean: split rho 50/50
+                    rho_mean = rho / 2.0
+                    rho_cov  = rho / 2.0
+                    mu_emp = X.mean(axis=0)
+                    mu_dp, mean_noise_scale = privatize_mean(
+                        trial_rng, mu_emp, n_samples, d, T, rho_mean,
+                        sensitivity_type=sensitivity_type)
+                    X_trial = X - mu_dp
+                    trial_reg_data = reg_data
+                    n_tr = X_trial.shape[0]
+                    Sigma_for_ssp = X_trial.T @ X_trial / (n_tr - 1)
+                    print(f"  Private mean (cov-only): rho_mean={rho_mean}, rho_cov={rho_cov}, "
+                          f"mean_noise_scale={mean_noise_scale:.4e}")
                 else:
                     rho_cov       = rho
                     X_trial       = X
