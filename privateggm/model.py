@@ -974,7 +974,25 @@ class IterativePrivateGGM:
             self.convergence_history.append({'solver': 'ipm_chol_solver', 'hist': convergence_hist})
 
             return Sigma_hat
-        
+
+        elif self.optimizer == "ipm_chol_sparse":
+            inds = get_observed_Sigma_entries(self.Sigma_tilde)
+            rows, cols = inds[:, 0], inds[:, 1]
+            vals = self.Sigma_tilde[rows, cols]
+            tau  = noise_scales_array[rows, cols]
+
+            Sigma_hat, convergence_hist = ggm_solve(
+                rows, cols, vals, tau, self.d, solver='ipm_chol_sparse',
+                mu_init=1.0, mu_factor=0.5, eps=1e-8,
+                max_outer=40, max_inner=200
+            )
+
+            if not hasattr(self, 'convergence_history'):
+                self.convergence_history = []
+            self.convergence_history.append({'solver': 'ipm_chol_sparse', 'hist': convergence_hist})
+
+            return Sigma_hat
+
         elif self.optimizer == "lbfgs":
             # Convert measured_entries to array format expected by optimize_lbfgs
             measured_array = np.array([[i,j] for i,j in self.measured_entries])
@@ -1367,7 +1385,29 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
                 return self.Sigma_hat
 
             return Sigma_hat
-        
+
+        elif self.optimizer == "ipm_chol_sparse":
+            inds = get_observed_Sigma_entries(self.Sigma_tilde)
+            rows, cols = inds[:, 0], inds[:, 1]
+            vals = self.Sigma_tilde[rows, cols]
+            tau  = noise_scales_array[rows, cols]
+
+            Sigma_hat, convergence_hist = ggm_solve(
+                rows, cols, vals, tau, self.d, solver='ipm_chol_sparse',
+                mu_init=1.0, mu_factor=0.5, eps=1e-8,
+                max_outer=40, max_inner=200
+            )
+
+            if not hasattr(self, 'convergence_history'):
+                self.convergence_history = []
+            self.convergence_history.append({'solver': 'ipm_chol_sparse', 'hist': convergence_hist})
+
+            if np.any(np.isnan(Sigma_hat)) or np.any(np.isinf(Sigma_hat)):
+                print("WARNING: ipm_chol_sparse returned NaN/inf - keeping previous estimate")
+                return self.Sigma_hat
+
+            return Sigma_hat
+
         elif self.optimizer == "lbfgs":
             measured_array = np.array([[i,j] for i,j in self.measured_entries])
             z_init = initialize_z(self.Sigma_tilde, measured_array)

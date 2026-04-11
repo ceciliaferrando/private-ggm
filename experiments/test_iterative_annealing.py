@@ -581,7 +581,7 @@ if __name__ == '__main__':
                         help='Disable remeasuring entries (explicit flag)')
     parser.add_argument('--output-dir', type=str, default='results/linesearch',
                         help='Output directory for results (default: results/linesearch)')
-    parser.add_argument('--optimizer', type=str, default='pgd_maxent_solver', choices=['pgd_maxent_solver', 'pgd-maxent', 'ipm_chol', 'lbfgs'],
+    parser.add_argument('--optimizer', type=str, default='pgd_maxent_solver', choices=['pgd_maxent_solver', 'pgd-maxent', 'ipm_chol', 'ipm_chol_sparse', 'lbfgs'],
                         help='Optimization method to use (default: pgd_maxent_solver - Dan\'s optimized PGD solver; pgd-maxent for old model.py version)')
     parser.add_argument('--seed', type=int, default=42,
                         help='Random seed')
