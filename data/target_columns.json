@@ -2,7 +2,7 @@
   "adult": null,
   "SeoulBikeData": "Rented Bike Count",
   "BreastCancerWisconsin": "Diagnosis",
-  "LifeExpectancy": null,
+  "LifeExpectancy": "Life_expectancy",
   "communities_crime": "ViolentCrimesPerPop",
   "bankruptcy": null,
   "Ailerons": null,
@@ -15,5 +15,7 @@
   "ibm": null,
   "hill_valley": null,
   "madeline": null,
-  "pol_reg": null
+  "pol_reg": null,
+  "Parkinsons": null,
+  "bank32nh": null
 }

@@ -40,6 +40,9 @@ ENV/
 # Data and results
 data/*.csv
 data/*.json
+!data/madeline.csv
+!data/madeline_target.csv
+!data/target_columns.json
 results/
 pathologic_sigma_tilde_dp.npy
 
