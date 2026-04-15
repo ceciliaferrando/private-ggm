@@ -1147,9 +1147,9 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
         self.rho_per_round_select = rho_per_round * self.beta
         self.rho_per_round_measure  = rho_per_round * (1 - self.beta)
 
-        print(f"[DEBUG] rho={self.rho:.6e}, rho_used_after_diag={self.rho_used:.6e}, remaining={remaining_rho:.6e}")
-        print(f"[DEBUG] max_rounds={self.max_rounds}, rho_per_round={rho_per_round:.6e}")
-        print(f"[DEBUG] Initial per-round budget: select={self.rho_per_round_select:.6e}, measure={self.rho_per_round_measure:.6e}")
+        # print(f"[DEBUG] rho={self.rho:.6e}, rho_used_after_diag={self.rho_used:.6e}, remaining={remaining_rho:.6e}")
+        # print(f"[DEBUG] max_rounds={self.max_rounds}, rho_per_round={rho_per_round:.6e}")
+        # print(f"[DEBUG] Initial per-round budget: select={self.rho_per_round_select:.6e}, measure={self.rho_per_round_measure:.6e}")
         
         # ========================================
         # 3. Iterative measurements with annealing
@@ -1166,7 +1166,7 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
             _round_start = time.time()
             round_num += 1
             print(f"\n========== Round {round_num}/{self.max_rounds} (rho_used: {self.rho_used:.6e}/{self.rho:.6e}) ==========")
-            print(f"[DEBUG] round budget: select={self.rho_per_round_select:.6e}, measure={self.rho_per_round_measure:.6e}")
+            # print(f"[DEBUG] round budget: select={self.rho_per_round_select:.6e}, measure={self.rho_per_round_measure:.6e}")
 
             # Check if this is the final round
             # avoid leaving spare budget
@@ -1175,10 +1175,10 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
                 print(f"Budget exhausted up to float precision (remaining={remaining_budget:.6e}), stopping.")
                 break
             if remaining_budget < 2 * (self.rho_per_round_select + self.rho_per_round_measure):
-                print(f"[DEBUG] Final-round trigger: remaining={remaining_budget:.6e}, 2*(sel+meas)={2*(self.rho_per_round_select+self.rho_per_round_measure):.6e}")
+                # print(f"[DEBUG] Final-round trigger: remaining={remaining_budget:.6e}, 2*(sel+meas)={2*(self.rho_per_round_select+self.rho_per_round_measure):.6e}")
                 self.rho_per_round_select = remaining_budget * self.beta
                 self.rho_per_round_measure  = remaining_budget * (1 - self.beta)
-                print(f"[DEBUG] Reallocated: select={self.rho_per_round_select:.6e}, measure={self.rho_per_round_measure:.6e}")
+                # print(f"[DEBUG] Reallocated: select={self.rho_per_round_select:.6e}, measure={self.rho_per_round_measure:.6e}")
             
             # Compute scores for candidate entries (using previous round's estimate)
             scores = self.compute_entry_scores(Sigma_hat_old, allow_remeasurement=self.allow_remeasurement)
@@ -1307,7 +1307,7 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
             if diff <= threshold:
                 self.rho_per_round_select *= 2
                 self.rho_per_round_measure  *= 4
-                print(f"Small gain: annealing → select={self.rho_per_round_select:.6e}, measure={self.rho_per_round_measure:.6e}")
+                # print(f"Small gain: annealing → select={self.rho_per_round_select:.6e}, measure={self.rho_per_round_measure:.6e}")
             else:
                 print("Large enough gain: keeping current budget allocation")
             
