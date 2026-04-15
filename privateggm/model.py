@@ -1,3 +1,4 @@
+import time
 import numpy as np
 from scipy.linalg import solve, cholesky, eigh
 from scipy.optimize import line_search
@@ -1145,8 +1146,10 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
         
         self.rho_per_round_select = rho_per_round * self.beta
         self.rho_per_round_measure  = rho_per_round * (1 - self.beta)
-        
-        print(f"Initial per-round budget: select={self.rho_per_round_select:.6f}, measure={self.rho_per_round_measure :.6f}")
+
+        print(f"[DEBUG] rho={self.rho:.6e}, rho_used_after_diag={self.rho_used:.6e}, remaining={remaining_rho:.6e}")
+        print(f"[DEBUG] max_rounds={self.max_rounds}, rho_per_round={rho_per_round:.6e}")
+        print(f"[DEBUG] Initial per-round budget: select={self.rho_per_round_select:.6e}, measure={self.rho_per_round_measure:.6e}")
         
         # ========================================
         # 3. Iterative measurements with annealing
@@ -1156,18 +1159,26 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
         
         round_num = 0
         Sigma_hat_old = Sigma_hat_init  # Use initial diagonal-only estimate for first round
+        self.round_timings = []  # list of {round, round_time, ipm_time}
+        self.last_ipm_time = None
 
         while self.rho_used < self.rho and round_num < self.max_rounds:
+            _round_start = time.time()
             round_num += 1
-            print(f"\n========== Round {round_num}/{self.max_rounds} (rho_used: {self.rho_used:.6f}/{self.rho:.6f}) ==========")
-            
+            print(f"\n========== Round {round_num}/{self.max_rounds} (rho_used: {self.rho_used:.6e}/{self.rho:.6e}) ==========")
+            print(f"[DEBUG] round budget: select={self.rho_per_round_select:.6e}, measure={self.rho_per_round_measure:.6e}")
+
             # Check if this is the final round
             # avoid leaving spare budget
             remaining_budget = self.rho - self.rho_used
+            if remaining_budget < 1e-15 * self.rho:
+                print(f"Budget exhausted up to float precision (remaining={remaining_budget:.6e}), stopping.")
+                break
             if remaining_budget < 2 * (self.rho_per_round_select + self.rho_per_round_measure):
-                print("Final round: reallocating remaining budget")
+                print(f"[DEBUG] Final-round trigger: remaining={remaining_budget:.6e}, 2*(sel+meas)={2*(self.rho_per_round_select+self.rho_per_round_measure):.6e}")
                 self.rho_per_round_select = remaining_budget * self.beta
                 self.rho_per_round_measure  = remaining_budget * (1 - self.beta)
+                print(f"[DEBUG] Reallocated: select={self.rho_per_round_select:.6e}, measure={self.rho_per_round_measure:.6e}")
             
             # Compute scores for candidate entries (using previous round's estimate)
             scores = self.compute_entry_scores(Sigma_hat_old, allow_remeasurement=self.allow_remeasurement)
@@ -1263,8 +1274,15 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
             # ========================================
             # Update model and check convergence
             # ========================================
+            self.last_ipm_time = None
             Sigma_hat_new = self.get_current_estimate()
-            
+            _round_time = time.time() - _round_start
+            self.round_timings.append({
+                'round': round_num,
+                'round_time': _round_time,
+                'ipm_time': self.last_ipm_time,
+            })
+
             # Check if optimization failed (returned previous estimate due to NaN) TO-DO: review
             if np.any(np.isnan(Sigma_hat_new)) or np.any(np.isinf(Sigma_hat_new)):
                 print("WARNING: Optimization returned NaN/inf - skipping this round, keeping previous estimate")
@@ -1287,9 +1305,9 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
             # Annealing: double budgets if small gain 
             # ========================================
             if diff <= threshold:
-                print("Small gain: doubling future budgets (select x2, measure x4)")
                 self.rho_per_round_select *= 2
                 self.rho_per_round_measure  *= 4
+                print(f"Small gain: annealing → select={self.rho_per_round_select:.6e}, measure={self.rho_per_round_measure:.6e}")
             else:
                 print("Large enough gain: keeping current budget allocation")
             
@@ -1370,11 +1388,13 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
             vals = self.Sigma_tilde[rows, cols]
             tau  = noise_scales_array[rows, cols]
 
+            _ipm_start = time.time()
             Sigma_hat, convergence_hist = ggm_solve(
                 rows, cols, vals, tau, self.d, solver='ipm_chol',
                 mu_init=1.0, mu_factor=0.5, eps=1e-8,
                 max_outer=40, max_inner=200
             )
+            self.last_ipm_time = time.time() - _ipm_start
 
             if not hasattr(self, 'convergence_history'):
                 self.convergence_history = []
