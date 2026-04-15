@@ -16,6 +16,6 @@ python -m experiments.test_iterative_annealing \
     --n-trials 10 --sensitivity-type linf \
     --private-mean \
     --allow-remeasurement --optimizer ipm_chol \
-    --output-dir results/final_a03_b05/ipm_solver --seed 42
+    --output-dir results/final_a03_b05_priv/ipm_solver --seed 42
 
 echo "Done: thyroid_ann privmean alpha=0.3 beta=0.5"
