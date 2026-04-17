@@ -13,7 +13,8 @@ from ._shared import project_psd, _weights, _weighted_obj, normalize_coo
 
 
 def pgd(rows, cols, vals, tau, d,
-        eta=0.1, max_iters=2000, eps=1e-8, track_kkt=False):
+        eta=0.1, max_iters=2000, eps=1e-8, track_kkt=False,
+        fill_unobserved=0.0):
     """
     Stage A: Projected Gradient Descent onto the PSD cone.
 
@@ -22,15 +23,18 @@ def pgd(rows, cols, vals, tau, d,
 
     Parameters
     ----------
-    rows, cols : (m,) int arrays — observed index pairs (any triangular format)
-    vals       : (m,) float array — noisy observed values
-    tau        : (m,) float array — noise std-devs
-    d          : int — matrix dimension
-    eta        : initial step size
-    max_iters  : maximum PGD iterations
-    eps        : convergence tolerance on step size ‖X_new − X‖_F
-    track_kkt  : if True, record min_eig_X, min_eig_G, comp_slack each iter
-                 (adds one eigendecomposition per step — disable for speed)
+    rows, cols       : (m,) int arrays — observed index pairs (any triangular format)
+    vals             : (m,) float array — noisy observed values
+    tau              : (m,) float array — noise std-devs
+    d                : int — matrix dimension
+    eta              : initial step size
+    max_iters        : maximum PGD iterations
+    eps              : convergence tolerance on step size ‖X_new − X‖_F
+    track_kkt        : if True, record min_eig_X, min_eig_G, comp_slack each iter
+                       (adds one eigendecomposition per step — disable for speed)
+    fill_unobserved  : value used to fill unobserved entries of X at initialization
+                       (default 0.0; try small positive values to bias toward denser
+                       initial guess before PSD projection)
 
     Hist fields
     -----------
@@ -41,8 +45,9 @@ def pgd(rows, cols, vals, tau, d,
     rows, cols, vals, tau = normalize_coo(rows, cols, vals, tau)
     w = _weights(tau)
 
-    # Build local dense A for initialization and gradient computation
-    A = np.zeros((d, d))
+    # Build local dense A for initialization and gradient computation.
+    # Unobserved entries only affect initialization (gradient is masked to E).
+    A = np.full((d, d), fill_unobserved)
     A[rows, cols] = vals
     A[cols, rows] = vals
 
@@ -100,7 +105,7 @@ def pgd(rows, cols, vals, tau, d,
 def pgd_maxent(rows, cols, vals, tau, d,
                eta=0.1, pgd_iters=2000, pgd_eps=1e-8,
                lbfgs_iters=1000, eps=1e-8,
-               track_kkt=False):
+               track_kkt=False, fill_unobserved=0.0):
     """
     Two-stage pipeline: Stage A PGD then Stage B max-entropy completion.
 
@@ -113,12 +118,13 @@ def pgd_maxent(rows, cols, vals, tau, d,
     vals        : (m,) float array — noisy observed values
     tau         : (m,) float array — noise std-devs
     d           : int — matrix dimension
-    eta         : Stage A initial step size
-    pgd_iters   : Stage A max PGD iterations
-    pgd_eps     : Stage A convergence tolerance on step size
-    lbfgs_iters : Stage B max L-BFGS iterations
-    eps         : Stage B L-BFGS gradient tolerance
-    track_kkt   : if True, add KKT diagnostics to Stage A hist entries
+    eta              : Stage A initial step size
+    pgd_iters        : Stage A max PGD iterations
+    pgd_eps          : Stage A convergence tolerance on step size
+    lbfgs_iters      : Stage B max L-BFGS iterations
+    eps              : Stage B L-BFGS gradient tolerance
+    track_kkt        : if True, add KKT diagnostics to Stage A hist entries
+    fill_unobserved  : passed to pgd — value for unobserved entries at init
 
     Returns
     -------
@@ -136,7 +142,7 @@ def pgd_maxent(rows, cols, vals, tau, d,
 
     t0    = time.perf_counter()
     X_psd, hist = pgd(rows, cols, vals, tau, d, eta=eta, max_iters=pgd_iters, eps=pgd_eps,
-                      track_kkt=track_kkt)
+                      track_kkt=track_kkt, fill_unobserved=fill_unobserved)
     for entry in hist:
         entry['stage'] = 'A'
 
