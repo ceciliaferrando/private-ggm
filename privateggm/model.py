@@ -944,6 +944,56 @@ class IterativePrivateGGM:
 
             return Sigma_hat
 
+        elif self.optimizer == "pgd_nocc" or self.optimizer.startswith("pgd_nocc_fu"):
+            inds = get_observed_Sigma_entries(self.Sigma_tilde)
+            rows, cols = inds[:, 0], inds[:, 1]
+            vals = self.Sigma_tilde[rows, cols]
+            tau  = noise_scales_array[rows, cols]
+
+            # parse fill_unobserved from optimizer name, e.g. "pgd_nocc_fu10" -> 10.0
+            if self.optimizer.startswith("pgd_nocc_fu"):
+                fill_unobserved = float(self.optimizer[len("pgd_nocc_fu"):])
+            else:
+                fill_unobserved = 0.0
+
+            Sigma_hat, convergence_hist = ggm_solve(
+                rows, cols, vals, tau, self.d, solver='pgd_maxent',
+                eta=0.1, pgd_iters=2000, pgd_eps=1e-8,
+                lbfgs_iters=1000, eps=1e-8,
+                track_kkt=False, decompose=None,
+                fill_unobserved=fill_unobserved
+            )
+
+            if not hasattr(self, 'convergence_history'):
+                self.convergence_history = []
+            self.convergence_history.append({'solver': self.optimizer, 'hist': convergence_hist})
+
+            return Sigma_hat
+
+        elif self.optimizer == "pgd_pure" or self.optimizer.startswith("pgd_pure_fu"):
+            inds = get_observed_Sigma_entries(self.Sigma_tilde)
+            rows, cols = inds[:, 0], inds[:, 1]
+            vals = self.Sigma_tilde[rows, cols]
+            tau  = noise_scales_array[rows, cols]
+
+            if self.optimizer.startswith("pgd_pure_fu"):
+                fill_unobserved = float(self.optimizer[len("pgd_pure_fu"):])
+            else:
+                fill_unobserved = 0.0
+
+            Sigma_hat, convergence_hist = ggm_solve(
+                rows, cols, vals, tau, self.d, solver='pgd',
+                eta=0.1, max_iters=2000, eps=1e-8,
+                track_kkt=False, decompose=None,
+                fill_unobserved=fill_unobserved
+            )
+
+            if not hasattr(self, 'convergence_history'):
+                self.convergence_history = []
+            self.convergence_history.append({'solver': self.optimizer, 'hist': convergence_hist})
+
+            return Sigma_hat
+
         elif self.optimizer == "pgd-maxent":
             # Old pgd_maxent from model.py (dense, no component decomposition)
             inds = get_observed_Sigma_entries(self.Sigma_tilde)
@@ -958,16 +1008,17 @@ class IterativePrivateGGM:
 
             return Sigma_hat
 
-        elif self.optimizer == "ipm_chol":
+        elif self.optimizer in ("ipm_chol", "ipm_chol_nocc"):
             inds = get_observed_Sigma_entries(self.Sigma_tilde)
             rows, cols = inds[:, 0], inds[:, 1]
             vals = self.Sigma_tilde[rows, cols]
             tau  = noise_scales_array[rows, cols]
 
+            decompose = None if self.optimizer == "ipm_chol_nocc" else 'blocks'
             Sigma_hat, convergence_hist = ggm_solve(
                 rows, cols, vals, tau, self.d, solver='ipm_chol',
                 mu_init=1.0, mu_factor=0.5, eps=1e-8,
-                max_outer=40, max_inner=200
+                max_outer=40, max_inner=200, decompose=decompose
             )
 
             if not hasattr(self, 'convergence_history'):
@@ -1364,6 +1415,67 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
 
             return Sigma_hat
 
+        elif self.optimizer == "pgd_nocc" or self.optimizer.startswith("pgd_nocc_fu"):
+            inds = get_observed_Sigma_entries(self.Sigma_tilde)
+            rows, cols = inds[:, 0], inds[:, 1]
+            vals = self.Sigma_tilde[rows, cols]
+            tau  = noise_scales_array[rows, cols]
+
+            if self.optimizer.startswith("pgd_nocc_fu"):
+                fill_unobserved = float(self.optimizer[len("pgd_nocc_fu"):])
+            else:
+                fill_unobserved = 0.0
+
+            _pgd_start = time.time()
+            Sigma_hat, convergence_hist = ggm_solve(
+                rows, cols, vals, tau, self.d, solver='pgd_maxent',
+                eta=0.1, pgd_iters=2000, pgd_eps=1e-8,
+                lbfgs_iters=1000, eps=1e-8,
+                track_kkt=False, decompose=None,
+                fill_unobserved=fill_unobserved
+            )
+            self.last_ipm_time = time.time() - _pgd_start
+
+            if not hasattr(self, 'convergence_history'):
+                self.convergence_history = []
+            self.convergence_history.append({'solver': self.optimizer, 'hist': convergence_hist})
+
+            if np.any(np.isnan(Sigma_hat)) or np.any(np.isinf(Sigma_hat)):
+                print(f"WARNING: {self.optimizer} returned NaN/inf - keeping previous estimate")
+                return self.Sigma_hat
+
+            return Sigma_hat
+
+        elif self.optimizer == "pgd_pure" or self.optimizer.startswith("pgd_pure_fu"):
+            inds = get_observed_Sigma_entries(self.Sigma_tilde)
+            rows, cols = inds[:, 0], inds[:, 1]
+            vals = self.Sigma_tilde[rows, cols]
+            tau  = noise_scales_array[rows, cols]
+
+            if self.optimizer.startswith("pgd_pure_fu"):
+                fill_unobserved = float(self.optimizer[len("pgd_pure_fu"):])
+            else:
+                fill_unobserved = 0.0
+
+            _pgd_start = time.time()
+            Sigma_hat, convergence_hist = ggm_solve(
+                rows, cols, vals, tau, self.d, solver='pgd',
+                eta=0.1, max_iters=2000, eps=1e-8,
+                track_kkt=False, decompose=None,
+                fill_unobserved=fill_unobserved
+            )
+            self.last_ipm_time = time.time() - _pgd_start
+
+            if not hasattr(self, 'convergence_history'):
+                self.convergence_history = []
+            self.convergence_history.append({'solver': self.optimizer, 'hist': convergence_hist})
+
+            if np.any(np.isnan(Sigma_hat)) or np.any(np.isinf(Sigma_hat)):
+                print(f"WARNING: {self.optimizer} returned NaN/inf - keeping previous estimate")
+                return self.Sigma_hat
+
+            return Sigma_hat
+
         elif self.optimizer == "pgd-maxent":
             # Old pgd_maxent from model.py (dense, no component decomposition)
             inds = get_observed_Sigma_entries(self.Sigma_tilde)
@@ -1382,17 +1494,18 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
 
             return Sigma_hat
 
-        elif self.optimizer == "ipm_chol":
+        elif self.optimizer in ("ipm_chol", "ipm_chol_nocc"):
             inds = get_observed_Sigma_entries(self.Sigma_tilde)
             rows, cols = inds[:, 0], inds[:, 1]
             vals = self.Sigma_tilde[rows, cols]
             tau  = noise_scales_array[rows, cols]
 
+            decompose = None if self.optimizer == "ipm_chol_nocc" else 'blocks'
             _ipm_start = time.time()
             Sigma_hat, convergence_hist = ggm_solve(
                 rows, cols, vals, tau, self.d, solver='ipm_chol',
                 mu_init=1.0, mu_factor=0.5, eps=1e-8,
-                max_outer=40, max_inner=200
+                max_outer=40, max_inner=200, decompose=decompose
             )
             self.last_ipm_time = time.time() - _ipm_start
 

@@ -22,6 +22,7 @@ from privateggm.utils import (
     frobenius_error
 )
 from privateggm.privacy import SSP_covariance, cov_sensitivity_l2, cov_sensitivity_linf, cov_jk_sensitivity_l2, cov_jk_sensitivity_linf, gaussian_mechanism, privatize_mean
+from privateggm.baselines import diagonal_XTy_regression, AdaSSP_linear_regression
 
 
 def save_results(results, output_file):
@@ -60,6 +61,7 @@ def run_experiment(
     ssp_target_frac=0.0,
     beta=0.1,
     private_mean=False,
+    ridge_lambda=0.0,
 ):
     """
     Run annealing experiments.
@@ -425,8 +427,16 @@ def run_experiment(
                 # Regression evaluation (if enabled)
                 reg_results_annealing = {}
                 reg_results_ssp = {}
+                reg_results_diag = {}
+                reg_results_adassp = {}
                 if regression and trial_reg_data is not None:
-                    beta_pace = extract_regression_coefficients(Sigma_est, d)
+                    if ridge_lambda > 0:
+                        Sigma_XX = Sigma_est[:-1, :-1]
+                        Sigma_Xy = Sigma_est[:-1, -1]
+                        A = Sigma_XX + ridge_lambda * np.eye(Sigma_XX.shape[0])
+                        beta_pace, _, _, _ = np.linalg.lstsq(A, Sigma_Xy, rcond=None)
+                    else:
+                        beta_pace = extract_regression_coefficients(Sigma_est, d)
                     mse_pace  = regression_mse(trial_reg_data['X_test_feat'], trial_reg_data['y_test'], beta_pace)
                     reg_results_annealing = {
                         'beta': beta_pace.tolist(),
@@ -453,8 +463,27 @@ def run_experiment(
                             'regression_mode': 'joint',
                         }
 
+                    # Diagonal + XTy baseline
+                    beta_diag, _, _, _ = diagonal_XTy_regression(Sigma_for_ssp, n_samples, rho_cov, T, trial_rng, xty_frac=ssp_target_frac)
+                    mse_diag = regression_mse(trial_reg_data['X_test_feat'], trial_reg_data['y_test'], beta_diag)
+                    reg_results_diag = {'beta': beta_diag.tolist(), 'mse': mse_diag}
+
+                    # AdaSSP baseline
+                    # bounds after [-1,1] per-coordinate rescaling: L2 row norm ≤ sqrt(d-1), |y| ≤ 1
+                    bound_X   = np.sqrt(d - 1) * T
+                    bound_y   = T
+                    bound_XTX = (d - 1) * T ** 2
+                    theta_ada, _, _, lambda_ada = AdaSSP_linear_regression(
+                        Sigma_for_ssp, n_samples, rho_cov,
+                        bound_X, bound_y, bound_XTX,
+                        XTy_budget_split=ssp_target_frac if ssp_target_frac > 0 else 0.5,
+                    )
+                    print(f"  AdaSSP lambda_dp (ridge on XTX scale): {lambda_ada:.6f}  (Sigma scale: {lambda_ada/(n_samples-1):.2e})")
+                    mse_ada = regression_mse(trial_reg_data['X_test_feat'], trial_reg_data['y_test'], theta_ada)
+                    reg_results_adassp = {'beta': theta_ada.tolist(), 'mse': mse_ada}
+
                     mse_ssp_ = reg_results_ssp['mse']
-                    print(f"  Regression MSE — PACE-GGM: {mse_pace:.6f}  SSP: {mse_ssp_:.6f}")
+                    print(f"  Regression MSE — PACE-GGM: {mse_pace:.6f}  diag+XTy: {mse_diag:.6f}  SSP: {mse_ssp_:.6f}  AdaSSP: {mse_ada:.6f}")
 
                 # Store results (metrics only, no matrices)
                 trial_results = {
@@ -468,6 +497,7 @@ def run_experiment(
                         'entry_to_rounds': entry_to_rounds_serialized,
                         'kkt_conditions': kkt_summary,
                         'trial_time_seconds': float(model.trial_time_seconds) if hasattr(model, 'trial_time_seconds') else None,
+                        'round_timings': model.round_timings if hasattr(model, 'round_timings') else [],
                         **reg_results_annealing,
                     },
                     'baseline': {
@@ -481,6 +511,8 @@ def run_experiment(
                         'trial_time_seconds': float(ssp_elapsed_time),
                         **reg_results_ssp,
                     },
+                    'diag_xty': reg_results_diag,
+                    'adassp': reg_results_adassp,
                 }
                 
                 results['results'][rho].append(trial_results)
@@ -595,8 +627,11 @@ if __name__ == '__main__':
                         help='Disable remeasuring entries (explicit flag)')
     parser.add_argument('--output-dir', type=str, default='results/linesearch',
                         help='Output directory for results (default: results/linesearch)')
-    parser.add_argument('--optimizer', type=str, default='pgd_maxent_solver', choices=['pgd_maxent_solver', 'pgd-maxent', 'ipm_chol', 'ipm_chol_sparse', 'lbfgs'],
-                        help='Optimization method to use (default: pgd_maxent_solver - Dan\'s optimized PGD solver; pgd-maxent for old model.py version)')
+    parser.add_argument('--optimizer', type=str, default='pgd_maxent_solver',
+                        choices=['pgd_maxent_solver', 'pgd_nocc', 'pgd_nocc_fu1', 'pgd_nocc_fu10', 'pgd_nocc_fu100', 'pgd_nocc_fu1000',
+                                 'pgd_pure', 'pgd_pure_fu1', 'pgd_pure_fu10', 'pgd_pure_fu100', 'pgd_pure_fu1000',
+                                 'pgd-maxent', 'ipm_chol', 'ipm_chol_nocc', 'ipm_chol_sparse', 'lbfgs'],
+                        help='Optimization method to use (default: pgd_maxent_solver; pgd_nocc_fu{N} sets fill_unobserved=N)')
     parser.add_argument('--seed', type=int, default=42,
                         help='Random seed')
     parser.add_argument('--regression', action='store_true', default=False,
@@ -609,6 +644,8 @@ if __name__ == '__main__':
                         help='Fraction of SSP budget dedicated to X^Ty cross-covariance (default: 0.0 = standard joint SSP)')
     parser.add_argument('--private-mean', action='store_true', default=False,
                         help='Use private mean: split rho equally between mean estimation and covariance estimation')
+    parser.add_argument('--ridge-lambda', type=float, default=0.0,
+                        help='Ridge regularization lambda added to XTX before PACE-GGM regression solve (default: 0.0)')
 
     args = parser.parse_args()
     
@@ -662,4 +699,5 @@ if __name__ == '__main__':
         ssp_target_frac=args.ssp_target_frac,
         beta=args.beta,
         private_mean=args.private_mean,
+        ridge_lambda=args.ridge_lambda,
     )
