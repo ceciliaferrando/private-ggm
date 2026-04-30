@@ -1,5 +1,161 @@
+import sys
 import numpy as np
+from types import SimpleNamespace
 from privateggm.privacy import cov_jk_sensitivity_linf, SSP_gradient, gaussian_mechanism
+
+# ── PrivateCovariance repo wrappers ───────────────────────────────────────────
+# Clone https://github.com/hkustDB/PrivateCovariance and set this path, or
+# export PRIVATE_COV_REPO=/path/to/PrivateCovariance before running.
+import os as _os
+_PRIVATE_COV_REPO = _os.environ.get(
+    'PRIVATE_COV_REPO',
+    _os.path.expanduser('~/PrivateCovariance'),
+)
+
+
+def _ensure_private_cov_on_path():
+    """Add PrivateCovariance repo to sys.path if not already importable."""
+    try:
+        import adaptive.algos  # noqa: F401 — already on path
+        return
+    except ModuleNotFoundError:
+        pass
+    if not _os.path.isdir(_PRIVATE_COV_REPO):
+        raise RuntimeError(
+            f"PrivateCovariance repo not found at '{_PRIVATE_COV_REPO}'. "
+            "Clone https://github.com/hkustDB/PrivateCovariance and set "
+            "the PRIVATE_COV_REPO environment variable (or edit "
+            "_PRIVATE_COV_REPO in baselines.py)."
+        )
+    if _PRIVATE_COV_REPO not in sys.path:
+        sys.path.insert(0, _PRIVATE_COV_REPO)
+
+
+def _to_tensor(X_np):
+    """Convert a float64 numpy array to a float32 torch tensor."""
+    import torch
+    return torch.from_numpy(X_np.astype('float32'))
+
+
+def adaptive_cov(X, rho, r=1.0, beta=0.1):
+    """Private covariance via AdaptiveCov (zCDP).
+
+    Wrapper around `adaptive.algos.AdaptiveCov` from the PrivateCovariance repo
+    (Wang et al., 2021). Uses the adaptive Sparse Vector Technique to choose
+    between a Gaussian and a SeparateCov estimator after adaptively clipping rows.
+
+    Args:
+        X:    numpy array of shape (n, d), raw (centred) data matrix.
+        rho:  zCDP privacy budget.
+        r:    L2 row-norm upper bound (default 1.0; clip X rows before calling).
+        beta: failure probability (default 0.1).
+
+    Returns:
+        Sigma_dp: numpy array of shape (d, d), private covariance estimate.
+    """
+    _ensure_private_cov_on_path()
+    from adaptive.algos import AdaptiveCov
+
+    n, d = X.shape
+    args = SimpleNamespace(total_budget=rho, n=n, d=d, beta=beta)
+    X_t = _to_tensor(X)
+    result = AdaptiveCov(X_t, args, r=r)
+    return result.numpy().astype('float64')
+
+
+def gauss_cov(X, rho, r=1.0, b_fleig=True):
+    """Private covariance via GaussCov (zCDP) — simple Gaussian noise baseline.
+
+    Wrapper around `adaptive.algos.GaussCov` from the PrivateCovariance repo.
+
+    Args:
+        X:       numpy array of shape (n, d).
+        rho:     zCDP privacy budget.
+        r:       L2 row-norm upper bound (default 1.0).
+        b_fleig: project eigenvalues to [0, r^2] (default True).
+
+    Returns:
+        Sigma_dp: numpy array of shape (d, d).
+    """
+    _ensure_private_cov_on_path()
+    from adaptive.algos import GaussCov
+
+    n, d = X.shape
+    X_t = _to_tensor(X)
+    result = GaussCov(X_t, n, d, rho, r=r, b_fleig=b_fleig)
+    return result.numpy().astype('float64')
+
+
+def em_cov(X, rho, delta=1e-5, beta=0.1, b_budget=False, b_fleig=True):
+    """Private covariance via EMCov (approximate DP).
+
+    Wrapper around `exponential.algos.EMCov` from the PrivateCovariance repo.
+    Uses an EM algorithm with the Bingham distribution to iteratively estimate
+    eigenvectors under (epsilon, delta)-DP.
+
+    The zCDP budget rho is converted to epsilon via the standard formula:
+        epsilon = rho + 2 * sqrt(rho * log(1/delta))
+
+    Args:
+        X:        numpy array of shape (n, d), raw (centred) data matrix.
+                  Rows must already satisfy the norm bound assumed by the method.
+        rho:      zCDP budget (converted to approx-DP internally).
+        delta:    delta for (epsilon, delta)-DP (default 1e-5).
+        beta:     failure probability used by the budget-allocation heuristic
+                  when b_budget=True (default 0.1).
+        b_budget: if True, use the eigenvalue-weighted budget allocation (Eq. 12
+                  of the paper); if False, uniform allocation (default False).
+        b_fleig:  project eigenvalues to [0, n] (default True).
+
+    Returns:
+        Sigma_dp: numpy array of shape (d, d), private covariance estimate.
+    """
+    _ensure_private_cov_on_path()
+    from exponential.algos import EMCov
+
+    n, d = X.shape
+    args = SimpleNamespace(total_budget=rho, delta=delta, n=n, d=d, beta=beta)
+    X_t = _to_tensor(X)
+    result = EMCov(X_t, args, b_budget=b_budget, b_fleig=b_fleig)
+    return result.numpy().astype('float64')
+
+
+def coinpress_cov(X, rho, r=1.0, t=4):
+    """Private covariance via CoinPress/cov_est (zCDP).
+
+    Wrapper around `coinpress.algos.cov_est` from the PrivateCovariance repo.
+    Uses an iterative Gaussian-noise + PSD-projection scheme.
+
+    Budget split across t iterations follows the schedule from the paper:
+        rho[i] = rho / (4*(t-1))   for i = 0, ..., t-2
+        rho[t-1] = 3/4 * rho       (last iteration gets 3/4 of the budget)
+
+    Args:
+        X:   numpy array of shape (n, d), raw (centred) data matrix.
+        rho: total zCDP privacy budget.
+        r:   L2 row-norm upper bound; used to set the eigenvalue upper bound
+             u = r^2 (default 1.0).
+        t:   number of CoinPress iterations (default 4).
+
+    Returns:
+        Sigma_dp: numpy array of shape (d, d), private covariance estimate.
+    """
+    _ensure_private_cov_on_path()
+    from coinpress.algos import cov_est
+
+    n, d = X.shape
+    u = r * r  # eigenvalue upper bound
+
+    if t == 1:
+        rho_schedule = [rho]
+    else:
+        rho_per_early = rho / (4.0 * (t - 1))
+        rho_schedule = [rho_per_early] * (t - 1) + [0.75 * rho]
+
+    args = SimpleNamespace(n=n, d=d, u=u, t=t, rho=rho_schedule)
+    X_t = _to_tensor(X)
+    result = cov_est(X_t, args)
+    return result.numpy().astype('float64')
 
 
 def zcdp_to_approxdp(rho, delta):
@@ -103,6 +259,50 @@ def AdaSSP_linear_regression(Sigma, n, rho, bound_X, bound_y, bound_XTX,
     theta_dp   = np.linalg.solve(XTX_dp_reg, XTy_dp)
 
     return theta_dp, XTX_dp_reg, XTy_dp, lambda_dp
+
+
+def private_min_eigenvalue_ridge_zcdp(Sigma_XX, rho_eigen, sigma_sensitivity,
+                                       failure_prob=0.05, delta=1e-5, rng=None):
+    """Privately estimate the minimum eigenvalue of Sigma_XX and compute an
+    adaptive ridge parameter, mirroring the AdaSSP eigenvalue step exactly.
+
+    The rho-zCDP budget is converted to (epsilon, delta)-DP via zcdp_to_approxdp,
+    and then the original AdaSSP noise calibration and threshold formula are used
+    unchanged on the Sigma (not XTX) scale.
+
+    Args:
+        Sigma_XX:          (d, d) empirical feature covariance
+        rho_eigen:         zCDP budget for this step (typically rho_total / 3)
+        sigma_sensitivity: spectral-norm sensitivity of Sigma_XX under one-sample
+                           change (= bound_XTX / (n - 1))
+        failure_prob:      failure probability for PSD guarantee (default 0.05)
+        delta:             delta for zCDP -> approxDP conversion (default 1e-5)
+        rng:               numpy random Generator
+
+    Returns:
+        eigen_min_dp:  privately estimated minimum eigenvalue (Sigma scale, >= 0)
+        lambda_sigma:  adaptive ridge to add to Sigma_XX (Sigma scale, >= 0)
+        noise_std:     noise standard deviation used
+    """
+    if rng is None:
+        rng = np.random.default_rng()
+
+    d = Sigma_XX.shape[0]
+    eigen_min = float(np.min(np.linalg.eigvalsh(Sigma_XX)))
+
+    # Convert rho-zCDP -> (epsilon, delta)-DP, then use AdaSSP noise calibration
+    epsilon = zcdp_to_approxdp(rho_eigen, delta)
+    noise_std = np.sqrt(np.log(2.0 / delta)) / epsilon * sigma_sensitivity
+
+    eigen_min_dp = max(0.0, eigen_min + rng.normal(0.0, noise_std)
+                       - sigma_sensitivity * np.log(6.0 / delta) / epsilon)
+
+    # AdaSSP threshold formula (unchanged, on Sigma scale)
+    threshold = (np.sqrt(d * np.log(2.0 / delta) * np.log(2.0 * d**2 / failure_prob))
+                 * sigma_sensitivity / epsilon)
+    lambda_sigma = max(0.0, threshold - eigen_min_dp)
+
+    return eigen_min_dp, lambda_sigma, noise_std
 
 
 def diagonal_XTy_regression(Sigma, n, rho, T, rng, xty_frac=0.5):
