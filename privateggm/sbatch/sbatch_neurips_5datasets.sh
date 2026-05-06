@@ -5,8 +5,8 @@
 #SBATCH --mem=32G
 #SBATCH --time=500:00:00
 
-cd /mnt/nfs/work1/sheldon/cferrando/private-ggm
-source /mnt/nfs/work1/sheldon/cferrando/conda_env/bin/activate
+cd /path/to/private-ggm
+source /path/to/conda_env/bin/activate
 
 python -m experiments.test_iterative_annealing \
     --data-type real --data-name adult \

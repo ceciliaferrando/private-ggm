@@ -5,9 +5,9 @@
 #SBATCH --mem=64G
 #SBATCH --time=48:00:00
 
-cd /mnt/nfs/work1/sheldon/cferrando/private-ggm
-source /mnt/nfs/work1/sheldon/cferrando/conda_env/bin/activate
-export PRIVATE_COV_REPO=/mnt/nfs/home/cferrando/PrivateCovariance
+cd /path/to/private-ggm
+source /path/to/conda_env/bin/activate
+export PRIVATE_COV_REPO=/path/to/PrivateCovariance
 
 python -m experiments.run_privcovariance_baselines \
     --datasets adult thyroid_ann ibm bank32nh communities_crime \
