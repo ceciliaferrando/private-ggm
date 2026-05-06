@@ -47,7 +47,7 @@ From the repository root:
 python -m experiments.test_iterative_annealing \
     --data-type real --data-name adult \
     --rho-values 0.0001 0.001 0.01 0.1 1.0 2.0 10.0 \
-    --alpha 0.2 --max-rounds-pct 2.0 \
+    --alpha 0.3 --beta 0.5 --max-rounds-pct 2.0 \
     --n-trials 10 --sensitivity-type linf \
     --allow-remeasurement --optimizer ipm_chol \
     --output-dir results/my_run --seed 42
@@ -60,7 +60,8 @@ Replace `adult` with any dataset name in `data/`. Available datasets: `adult`, `
 | Argument | Description |
 |---|---|
 | `--rho-values` | Privacy budgets ρ (zCDP) to evaluate |
-| `--alpha` | Annealing parameter α (fraction of budget per round) |
+| `--alpha` | Annealing parameter α (fraction of budget per select round) |
+| `--beta` | Annealing parameter β (fraction of budget per measure round) |
 | `--max-rounds-pct` | Max rounds as a fraction of off-diagonal entries |
 | `--n-trials` | Number of independent trials per ρ |
 | `--optimizer` | Solver: `ipm_chol` (default, recommended) or `pgd_maxent_solver` |
