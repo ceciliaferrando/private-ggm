@@ -64,7 +64,6 @@ sbatch privateggm/sbatch/sbatch_neurips_5datasets.sh
 Runs PACE-GGM on all 5 datasets (adult, thyroid_ann, ibm, bank32nh, communities_crime).
 Results saved to `results/neurips_5datasets/`.
 
-> **Note:** `communities_crime` uses `--max-rounds-pct 0.5` due to its high dimensionality (d=102); all others use `--max-rounds-pct 2.0`.
 
 To run a single dataset manually:
 
