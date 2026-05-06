@@ -2,11 +2,9 @@
 
 ## Requirements
 
-Python 3.10+ is recommended. Clone the repository and install:
+Python 3.10+ is recommended. From the repository root (or the unzipped submission folder):
 
 ```bash
-git clone <repo-url>
-cd private-ggm
 pip install -e .
 ```
 
