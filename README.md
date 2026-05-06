@@ -38,6 +38,16 @@ privateggm/sbatch/                 # SLURM job scripts (see Step 1–3 below)
 
 ---
 
+## Setup
+
+Before running any script or sbatch job, set the following paths to match your system:
+
+- `/path/to/private-ggm` → absolute path to this repository
+- `/path/to/conda_env` → path to your Python environment (e.g. `~/miniconda3/envs/myenv`)
+- `/path/to/PrivateCovariance` → path to the cloned PrivateCovariance repo (baselines only)
+
+These placeholders appear in all sbatch scripts under `privateggm/sbatch/`.
+
 ## Reproducing the experiments
 
 All experiments save results to a `results/` folder in the repository root.
