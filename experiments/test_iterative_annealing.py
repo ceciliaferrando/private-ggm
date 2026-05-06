@@ -1,0 +1,731 @@
+import numpy as np
+import json
+import os
+import pandas as pd
+import argparse
+
+from privateggm.data import (
+    generate_well_conditioned_gaussian,
+    load_data,
+    compute_and_save_bounds,
+    load_and_process_data
+)
+from privateggm.regression import (
+    prepare_regression_split,
+    extract_regression_coefficients,
+    regression_mse,
+    SSP_regression_XTy,
+)
+from privateggm.model import AnnealingIterativePrivateGGM
+from privateggm.utils import (
+    mahalanobis_cov_error,
+    frobenius_error
+)
+from privateggm.privacy import SSP_covariance, cov_sensitivity_l2, cov_sensitivity_linf, cov_jk_sensitivity_l2, cov_jk_sensitivity_linf, gaussian_mechanism, privatize_mean
+from privateggm.baselines import diagonal_XTy_regression, AdaSSP_linear_regression, private_min_eigenvalue_ridge_zcdp
+
+
+def save_results(results, output_file):
+    """Save results to JSON file."""
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    with open(output_file, 'w') as f:
+        json.dump(results, f, indent=2)
+    print(f"  → Results saved to {output_file}")
+
+
+def save_measurements(measurements_records, output_file):
+    """Save measurements records to JSON file."""
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    with open(output_file, 'w') as f:
+        json.dump(measurements_records, f, indent=2)
+
+
+
+
+def run_experiment(
+    data_type='synthetic',
+    data_name=None,
+    d=10,
+    n=1000,
+    rho_values=[0.1, 1.0, 10.0],
+    alpha=0.2,
+    max_rounds_pct=0.3,
+    n_trials=5,
+    sensitivity_type='linf',
+    allow_remeasurement=True,
+    output_dir='results/linesearch',
+    optimizer='pgd_maxent_solver',
+    seed=42,
+    regression=False,
+    target_budget_fraction=0.0,
+    ssp_target_frac=0.0,
+    beta=0.1,
+    private_mean=False,
+    ridge_lambda=0.0,
+):
+    """
+    Run annealing experiments.
+    
+    Args:
+        data_type : str
+            'synthetic' or 'real'
+        data_name : str
+            Name of real dataset (if data_type='real')
+        d : int
+            Dimension for synthetic data
+        n : int
+            Number of samples for synthetic data
+        rho_values : list
+            List of privacy budgets to test
+        alpha : float
+            Budget split parameter (fraction for diagonal)
+        max_rounds_pct : float
+            Maximum rounds as percentage of off-diagonal entries (e.g., 0.3 for 30%, 1.0 for 100%)
+        n_trials : int
+            Number of trials for each configuration
+        sensitivity_type : str
+            Type of sensitivity ('l2' or 'linf')
+        allow_remeasurement : bool
+            Whether to allow remeasuring entries
+        output_dir : str
+            Output directory for results
+        optimizer : str
+            Optimization method ('pgd-maxent', 'ipm_chol', or 'lbfgs')
+        seed : int
+            Random seed
+    """
+    
+    # Set random seed
+    rng = np.random.default_rng(seed)
+    
+    results = {
+        'parameters': {
+            'd': d,
+            'n': n,
+            'rho_values': rho_values,
+            'alpha': alpha,
+            'n_trials': n_trials,
+            'sensitivity_type': sensitivity_type,
+            'allow_remeasurement': allow_remeasurement,
+            'optimizer': optimizer,
+            'seed': seed
+        },
+        'results': {}
+    }
+    
+    # Set up data directory
+    outdir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
+    os.makedirs(outdir, exist_ok=True)
+
+    if data_type == 'synthetic':
+        # Generate synthetic data and bounds
+        df = generate_well_conditioned_gaussian(
+            rng=rng,
+            outdir=outdir,
+            n_samples=n,
+            d=d,
+            rescale=True
+        )
+        data_path = os.path.join(outdir, f"synthdata{d}rescaleTrue.csv")
+        bounds_path = os.path.join(outdir, "L_bounds_rescaleTrue.json")
+        
+        # Process the data
+        processed_data, actual_n, actual_d, Sigma_true, T = load_and_process_data(
+            data_path, bounds_path, clip_type=sensitivity_type)
+        X = processed_data.to_numpy()
+
+    else:  # real data
+        # Load target columns from JSON file
+        target_columns_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'target_columns.json')
+        target_col = None
+        
+        if os.path.exists(target_columns_path):
+            with open(target_columns_path, 'r') as f:
+                target_columns = json.load(f)
+                target_col = target_columns.get(data_name)
+        
+        if target_col:
+            print(f"Target column for {data_name}: {target_col} (will be moved to last position)")
+        else:
+            print(f"No target column specified for {data_name}")
+
+        # Load and process the data — target is moved to last column, never dropped
+        df = load_data(outdir, data_name=data_name, target_column=target_col, drop_columns=None)
+
+        print(f"Loaded {data_name}: {df.shape[0]} rows × {df.shape[1]} columns")
+        print(f"Columns: {list(df.columns)}")
+        
+        # Get dimension from data
+        d = df.shape[1]
+
+        if regression:
+            # Train/test split — scaler fit on train only, center using train mean
+            X, reg_data, Sigma_true, T, d, n_train, _ = prepare_regression_split(
+                df, seed=seed, test_size=0.2)
+            print(f"Regression mode: n_train={n_train}, n_test={len(df)-n_train}, d={d}")
+            if private_mean:
+                print("  Private mean mode: rho will be split 50/50 between mean and covariance")
+        else:
+            reg_data = None
+
+            # Handle missing values
+            print(f"Original data shape: {df.shape}")
+            print(f"Missing values per column:\n{df.isnull().sum()}")
+
+            # Drop rows with any missing values
+            df = df.dropna()
+            print(f"Data shape after dropping NaNs: {df.shape}")
+
+            # Compute bounds with rescaling
+            bounds_path = compute_and_save_bounds(df, outdir, rescale=True)
+
+            # Apply rescaling
+            from privateggm.data import rescale_data
+            df_rescaled = rescale_data(df)
+
+            # Save rescaled data
+            data_path = os.path.join(outdir, f"{data_name}_processed.csv")
+            df_rescaled.to_csv(data_path, index=False)
+
+            # Process the data
+            processed_data, actual_n, actual_d, Sigma_true, T = load_and_process_data(
+                data_path, bounds_path, clip_type=sensitivity_type)
+            X = processed_data.to_numpy()
+    
+    # Update results parameters with actual values
+    results['parameters']['d'] = d
+    results['parameters']['n'] = X.shape[0]
+    results['parameters']['dataset'] = data_name if data_type == 'real' else 'synthetic'
+    
+    # Set up output file path
+    dataset_name = data_name if data_type == 'real' else 'synthetic'
+    remeas_str = 'remeasure' if allow_remeasurement else 'no_remeasure'
+    output_file = f'{output_dir}/annealing_privacy_analysis_{dataset_name}_d{d}_alpha{alpha}_{remeas_str}.json'
+    
+    # Create output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Create covariance_matrices subdirectory for .npz files
+    matrices_dir = os.path.join(output_dir, 'covariance_matrices')
+    os.makedirs(matrices_dir, exist_ok=True)
+    
+    print(f"\nData statistics:")
+    print(f"X shape: {X.shape}")
+    print(f"Data range: [{X.min():.3f}, {X.max():.3f}]")
+    print(f"Data mean: {X.mean():.3f}")
+    print(f"Data std: {X.std():.3f}")
+    print(f"Sensitivity bound T: {T:.3f}")
+    print(f"Number of NaNs: {np.isnan(X).sum()}")
+    print(f"Number of Infs: {np.isinf(X).sum()}")
+
+    # Compute SSP baseline sensitivity
+    n_samples, d = X.shape
+    if sensitivity_type == 'l2':
+        ssp_sensitivity = cov_sensitivity_l2(n_samples, T)
+    else:  # linf
+        ssp_sensitivity = cov_sensitivity_linf(n_samples, d, T)
+
+    print(f"\nAnnealing mode parameters:")
+    print(f"  Allow remeasurement: {allow_remeasurement}")
+    print(f"  Weight exponent: 0.3 (hardcoded in model)")
+
+    # Measurements tracking
+    all_measurements = []
+
+    # Loop over rho values
+    for rho in rho_values:
+        print(f"\n{'='*80}")
+        print(f"Testing rho = {rho}")
+        print(f"{'='*80}")
+        
+        if rho not in results['results']:
+            results['results'][rho] = []
+
+        rho_covariance_matrices = {}  # accumulate covariance matrices across trials for this rho
+
+        for trial in range(n_trials):
+            print(f"\nTrial {trial + 1}/{n_trials}")
+            
+            try:
+                # Create RNG for this trial
+                trial_rng = np.random.default_rng(seed=seed + trial)
+                
+                # Private mean: use rho/2 for mean, rho/2 for covariance
+                # Total budget = rho (split equally). Sigma_true_for_metrics always
+                # uses the empirical (non-private) centering for error computation.
+                if private_mean and regression and reg_data is not None:
+                    rho_mean = rho / 2.0
+                    rho_cov  = rho / 2.0
+                    n_train_samples = reg_data['train_scaled'].shape[0]
+                    mu_dp, mean_noise_scale = privatize_mean(
+                        trial_rng, reg_data['mu_emp'], n_train_samples, d, T, rho_mean,
+                        sensitivity_type=sensitivity_type)
+                    # Re-center train and test with private mean
+                    X_trial = reg_data['train_scaled'] - mu_dp
+                    X_test_c_dp = reg_data['test_scaled'] - mu_dp
+                    trial_reg_data = {
+                        **reg_data,
+                        'X_test_feat': X_test_c_dp[:, :-1],
+                        'y_test':      X_test_c_dp[:, -1],
+                        'mu_used':     mu_dp,
+                    }
+                    n_tr = X_trial.shape[0]
+                    Sigma_for_ssp = X_trial.T @ X_trial / (n_tr - 1)  # second moment, X_trial already centered with mu_dp
+                    print(f"  Private mean: rho_mean={rho_mean}, rho_cov={rho_cov}, "
+                          f"mean_noise_scale={mean_noise_scale:.4e}")
+                elif private_mean and not regression:
+                    # Covariance-only private mean: split rho 50/50
+                    rho_mean = rho / 2.0
+                    rho_cov  = rho / 2.0
+                    mu_emp = X.mean(axis=0)
+                    mu_dp, mean_noise_scale = privatize_mean(
+                        trial_rng, mu_emp, n_samples, d, T, rho_mean,
+                        sensitivity_type=sensitivity_type)
+                    X_trial = X - mu_dp
+                    trial_reg_data = reg_data
+                    n_tr = X_trial.shape[0]
+                    Sigma_for_ssp = X_trial.T @ X_trial / (n_tr - 1)
+                    print(f"  Private mean (cov-only): rho_mean={rho_mean}, rho_cov={rho_cov}, "
+                          f"mean_noise_scale={mean_noise_scale:.4e}")
+                else:
+                    rho_cov       = rho
+                    X_trial       = X
+                    trial_reg_data = reg_data
+                    Sigma_for_ssp  = Sigma_true
+
+                # Sensitivity bounds (shared by eigen step and AdaSSP)
+                # d-1 features (last column is target), L_inf bound T
+                bound_X   = np.sqrt(d - 1) * T
+                bound_y   = T
+                bound_XTX = (d - 1) * T ** 2
+
+                # For regression: allocate 1/3 of rho to private min-eigenvalue
+                # estimation (adaptive ridge), 2/3 to PACE-GGM covariance estimation.
+                # For non-regression: full rho goes to covariance estimation.
+                if regression and reg_data is not None:
+                    rho_eigen_step    = rho_cov / 3.0
+                    rho_pace          = rho_cov * 2.0 / 3.0
+                    sigma_sensitivity = bound_XTX / (n_samples - 1)
+                    X_feat            = X_trial[:, :-1]
+                    Sigma_XX_emp      = X_feat.T @ X_feat / (X_feat.shape[0] - 1)
+                    eigen_min_dp, lambda_adaptive, eigen_noise_std = \
+                        private_min_eigenvalue_ridge_zcdp(
+                            Sigma_XX_emp, rho_eigen_step, sigma_sensitivity,
+                            rng=trial_rng)
+                    print(f"  Eigen step: rho_eigen={rho_eigen_step:.4f}, "
+                          f"noise_std={eigen_noise_std:.2e}, "
+                          f"eigen_min_dp={eigen_min_dp:.4f}, "
+                          f"lambda_adaptive={lambda_adaptive:.4e}")
+                else:
+                    rho_pace        = rho_cov
+                    lambda_adaptive = ridge_lambda  # fall back to fixed ridge for non-regression
+                    eigen_min_dp    = None
+
+                # Run annealing algorithm
+                print(f"Running annealing algorithm with:")
+                print(f"  d={d}, rho={rho_pace}, alpha={alpha}")
+                print(f"  sensitivity_type={sensitivity_type}, norm_bound={T}")
+                print(f"  allow_remeasurement={allow_remeasurement}")
+
+                # Set max_rounds based on percentage of off-diagonal entries
+                n_off_diag = d * (d - 1) // 2
+                max_rounds = int(max_rounds_pct * n_off_diag)
+                print(f"  max_rounds: {max_rounds} ({max_rounds_pct*100:.0f}% of {n_off_diag} off-diagonal entries)")
+
+                model = AnnealingIterativePrivateGGM(
+                    rng=trial_rng,
+                    d=d,
+                    rho=rho_pace,
+                    alpha=alpha,
+                    beta=beta,
+                    max_rounds=max_rounds,
+                    sensitivity_type=sensitivity_type,
+                    norm_bound=T,
+                    optimizer=optimizer,
+                    allow_remeasurement=allow_remeasurement,
+                    target_budget_fraction=target_budget_fraction,
+                )
+
+                Sigma_est = model.fit(X_trial, pre_centered=private_mean and regression)
+                
+                # Save convergence information for trial 0 only (in same folder as main results)
+                if trial == 0 and hasattr(model, 'convergence_history') and model.convergence_history:
+                    dataset_label = data_name if data_type == 'real' else f'synthetic_d{d}'
+                    
+                    # Convert JAX arrays to regular Python lists for JSON serialization
+                    def convert_to_serializable(obj):
+                        """Convert JAX arrays and numpy arrays to Python lists recursively"""
+                        if hasattr(obj, 'tolist'):  # numpy or JAX array
+                            return obj.tolist()
+                        elif isinstance(obj, dict):
+                            return {k: convert_to_serializable(v) for k, v in obj.items()}
+                        elif isinstance(obj, list):
+                            return [convert_to_serializable(item) for item in obj]
+                        else:
+                            return obj
+                    
+                    conv_data = {
+                        'settings': {
+                            'dataset': dataset_label,
+                            'd': d,
+                            'n': X.shape[0],
+                            'rho': rho,
+                            'alpha': alpha,
+                            'beta': 0.1,
+                            'max_rounds': max_rounds
+                        },
+                        'convergence_history': convert_to_serializable(model.convergence_history)
+                    }
+                    
+                    # Save as JSON in same folder as main results
+                    json_path = os.path.join(output_dir, f'convergence_{dataset_label}_rho{rho}.json')
+                    with open(json_path, 'w') as f:
+                        json.dump(conv_data, f, indent=2)
+                
+                # Compute errors for annealing method
+                mah_error = mahalanobis_cov_error(Sigma_true, Sigma_est)
+                frob_error = frobenius_error(Sigma_true, Sigma_est)
+                
+                # Diagonal-only baseline: spend rho_cov on diagonal only (same budget as PACE-GGM/SSP).
+                # Uses Sigma_for_ssp which is computed from X_trial (privately centered when
+                # private_mean=True, empirical centering otherwise) — fair comparison.
+                diag_entry_sensitivity = cov_jk_sensitivity_l2(n, T) if sensitivity_type == 'l2' else cov_jk_sensitivity_linf(n, T)
+                Sigma_diag_baseline = np.zeros_like(Sigma_true)
+                rho_per_diag_full = rho_cov / d
+                print(f"Baseline: Spending {rho_cov} budget on {d} diagonals = {rho_per_diag_full} per diagonal")
+                for i in range(d):
+                    noisy_diag, _, _ = gaussian_mechanism(
+                        trial_rng,
+                        Sigma_for_ssp[i, i],
+                        diag_entry_sensitivity,
+                        rho_per_diag_full
+                    )
+                    Sigma_diag_baseline[i, i] = noisy_diag
+                # Project to PSD if needed
+                from privateggm.utils import project_to_PSD
+                Sigma_diag_baseline = project_to_PSD(Sigma_diag_baseline, thresh=0)
+                
+                mah_error_baseline = mahalanobis_cov_error(Sigma_true, Sigma_diag_baseline)
+                frob_error_baseline = frobenius_error(Sigma_true, Sigma_diag_baseline)
+                
+                # Compute SSP baseline with same privacy budget
+                import time
+                ssp_start_time = time.time()
+                Sigma_SSP, ssp_noise_scale = SSP_covariance(Sigma_for_ssp, ssp_sensitivity, rho_cov, rng=trial_rng)
+                ssp_elapsed_time = time.time() - ssp_start_time
+                mah_error_ssp = mahalanobis_cov_error(Sigma_true, Sigma_SSP)
+                frob_error_ssp = frobenius_error(Sigma_true, Sigma_SSP)
+                
+                # Convert entry_to_rounds to JSON-serializable format (dict keys must be strings)
+                entry_to_rounds_serialized = {}
+                if hasattr(model, 'entry_to_rounds'):
+                    for (i, j), rounds_list in model.entry_to_rounds.items():
+                        key = f"({i},{j})"  # Convert tuple key to string
+                        entry_to_rounds_serialized[key] = rounds_list
+
+                # Convert entry_to_noise_scales to JSON-serializable format
+                entry_to_noise_scales_serialized = {}
+                if hasattr(model, 'entry_to_noise_scales'):
+                    for (i, j), scales_list in model.entry_to_noise_scales.items():
+                        key = f"({i},{j})"
+                        entry_to_noise_scales_serialized[key] = [float(s) for s in scales_list]
+                
+                # Extract KKT conditions from convergence history
+                kkt_summary = {}
+                if hasattr(model, 'convergence_history') and model.convergence_history:
+                    for round_idx, conv_info in enumerate(model.convergence_history):
+                        if 'pgd' in conv_info and 'kkt' in conv_info['pgd']:
+                            kkt = conv_info['pgd']['kkt']
+                            kkt_summary[f'round_{round_idx}'] = {
+                                'is_optimum': bool(kkt['is_optimum']),
+                                'primal_feasibility': float(kkt['primal_feasibility']),
+                                'dual_feasibility': float(kkt['dual_feasibility']),
+                                'complementary_slackness': float(kkt['complementary_slackness']),
+                                'min_eig_W': float(kkt['min_eig_W']),
+                                'min_eig_grad': float(kkt['min_eig_grad'])
+                            }
+                
+                # Accumulate covariance matrices for this rho (saved to .npz after all trials)
+                rho_covariance_matrices[f'trial{trial}_annealing'] = Sigma_est
+                rho_covariance_matrices[f'trial{trial}_ssp'] = Sigma_SSP
+                rho_covariance_matrices[f'trial{trial}_baseline'] = Sigma_diag_baseline
+                if 'true_cov' not in rho_covariance_matrices:
+                    rho_covariance_matrices['true_cov'] = Sigma_true
+
+                # Regression evaluation (if enabled)
+                reg_results_annealing = {}
+                reg_results_ssp = {}
+                reg_results_diag = {}
+                reg_results_adassp = {}
+                if regression and trial_reg_data is not None:
+                    Sigma_XX = Sigma_est[:-1, :-1]
+                    Sigma_Xy = Sigma_est[:-1, -1]
+                    if lambda_adaptive > 0:
+                        A = Sigma_XX + lambda_adaptive * np.eye(Sigma_XX.shape[0])
+                        beta_pace, _, _, _ = np.linalg.lstsq(A, Sigma_Xy, rcond=None)
+                    else:
+                        beta_pace = extract_regression_coefficients(Sigma_est, d)
+                    mse_pace  = regression_mse(trial_reg_data['X_test_feat'], trial_reg_data['y_test'], beta_pace)
+                    reg_results_annealing = {
+                        'beta': beta_pace.tolist(),
+                        'mse': mse_pace,
+                        'regression_mode': 'target_pairs' if target_budget_fraction > 0 else 'joint',
+                        'lambda_adaptive': float(lambda_adaptive),
+                        'eigen_min_dp': float(eigen_min_dp) if eigen_min_dp is not None else None,
+                    }
+
+                    if ssp_target_frac > 0:
+                        # SSP with dedicated X^Ty budget
+                        _, _, beta_ssp_, _, _ = SSP_regression_XTy(
+                            X_trial, rho_cov, ssp_target_frac, T, trial_rng
+                        )
+                        reg_results_ssp = {
+                            'beta': beta_ssp_.tolist(),
+                            'mse': regression_mse(trial_reg_data['X_test_feat'], trial_reg_data['y_test'], beta_ssp_),
+                            'regression_mode': 'XTy_split',
+                        }
+                    else:
+                        # Standard SSP: extract from joint covariance
+                        beta_ssp_ = extract_regression_coefficients(Sigma_SSP, d)
+                        reg_results_ssp = {
+                            'beta': beta_ssp_.tolist(),
+                            'mse': regression_mse(trial_reg_data['X_test_feat'], trial_reg_data['y_test'], beta_ssp_),
+                            'regression_mode': 'joint',
+                        }
+
+                    # Diagonal + XTy baseline
+                    beta_diag, _, _, _ = diagonal_XTy_regression(Sigma_for_ssp, n_samples, rho_cov, T, trial_rng, xty_frac=ssp_target_frac)
+                    mse_diag = regression_mse(trial_reg_data['X_test_feat'], trial_reg_data['y_test'], beta_diag)
+                    reg_results_diag = {'beta': beta_diag.tolist(), 'mse': mse_diag}
+
+                    # AdaSSP baseline (bound_X, bound_y, bound_XTX computed above)
+                    theta_ada, _, _, lambda_ada = AdaSSP_linear_regression(
+                        Sigma_for_ssp, n_samples, rho_cov,
+                        bound_X, bound_y, bound_XTX,
+                        XTy_budget_split=0.5,  # natural equal 3-way split: eigen/XTX/XTy each get eps/3
+                    )
+                    print(f"  AdaSSP lambda_dp (ridge on XTX scale): {lambda_ada:.6f}  (Sigma scale: {lambda_ada/(n_samples-1):.2e})")
+                    mse_ada = regression_mse(trial_reg_data['X_test_feat'], trial_reg_data['y_test'], theta_ada)
+                    reg_results_adassp = {'beta': theta_ada.tolist(), 'mse': mse_ada,
+                                          'lambda_dp': float(lambda_ada),
+                                          'lambda_dp_sigma_scale': float(lambda_ada / (n_samples - 1))}
+
+                    mse_ssp_ = reg_results_ssp['mse']
+                    print(f"  Regression MSE — PACE-GGM: {mse_pace:.6f}  diag+XTy: {mse_diag:.6f}  SSP: {mse_ssp_:.6f}  AdaSSP: {mse_ada:.6f}")
+
+                # Store results (metrics only, no matrices)
+                trial_results = {
+                    'annealing': {
+                        'mahalanobis_error': float(mah_error),
+                        'frobenius_error': float(frob_error),
+                        'n_rounds': len(model.measurements),
+                        'total_measurements': len(model.measurements),
+                        'measurements': {f"({i},{j})": float(v) for (i, j), v in model.measurements.items()},
+                        'noise_scales': {f"({i},{j})": float(v) for (i, j), v in model.noise_scales.items()},
+                        'entry_to_rounds': entry_to_rounds_serialized,
+                        'kkt_conditions': kkt_summary,
+                        'trial_time_seconds': float(model.trial_time_seconds) if hasattr(model, 'trial_time_seconds') else None,
+                        'round_timings': model.round_timings if hasattr(model, 'round_timings') else [],
+                        **reg_results_annealing,
+                    },
+                    'baseline': {
+                        'mahalanobis_error': float(mah_error_baseline),
+                        'frobenius_error': float(frob_error_baseline),
+                    },
+                    'ssp': {
+                        'mahalanobis_error': float(mah_error_ssp),
+                        'frobenius_error': float(frob_error_ssp),
+                        'noise_scale': float(ssp_noise_scale),
+                        'trial_time_seconds': float(ssp_elapsed_time),
+                        **reg_results_ssp,
+                    },
+                    'diag_xty': reg_results_diag,
+                    'adassp': reg_results_adassp,
+                }
+                
+                results['results'][rho].append(trial_results)
+                
+                # Save measurements to dictionary tracking entry positions and rounds
+                measured_entries_list = sorted(list(model.measured_entries))
+                measurements_record = {
+                    'dataset': data_name if data_type == 'real' else 'synthetic',
+                    'trial': trial,
+                    'rho': float(rho),
+                    'd': int(d),
+                    'n': int(X.shape[0]),
+                    'allow_remeasurement': allow_remeasurement,
+                    'optimizer': optimizer,
+                    'entry_to_rounds': entry_to_rounds_serialized if hasattr(model, 'entry_to_rounds') else {},
+                    'entry_to_noise_scales': entry_to_noise_scales_serialized if hasattr(model, 'entry_to_noise_scales') else {},
+                    'n_measured': len(measured_entries_list),
+                    'n_diagonal': sum(1 for i, j in measured_entries_list if i == j),
+                    'n_offdiagonal': sum(1 for i, j in measured_entries_list if i != j),
+                }
+                all_measurements.append(measurements_record)
+                
+                print(f"Trial completed successfully")
+                print(f"  Annealing: Mah={mah_error:.4f}, Frob={frob_error:.4f}")
+                if mah_error_baseline is not None:
+                    print(f"  Baseline:  Mah={mah_error_baseline:.4f}, Frob={frob_error_baseline:.4f}")
+                print(f"  SSP:       Mah={mah_error_ssp:.4f}, Frob={frob_error_ssp:.4f}")
+                print(f"  Total measurements: {len(model.measurements)}")
+                print(f"  SSP noise scale: {ssp_noise_scale:.6e}")
+                
+                # Print KKT conditions for first and last round
+                if hasattr(model, 'convergence_history') and model.convergence_history:
+                    print(f"\n  KKT Conditions Summary:")
+                    
+                    # First round
+                    first_round = model.convergence_history[0]
+                    if 'pgd' in first_round and 'kkt' in first_round['pgd']:
+                        kkt = first_round['pgd']['kkt']
+                        print(f"    Round 0 (first):")
+                        print(f"      is_optimum={kkt['is_optimum']}, primal_feas={kkt['primal_feasibility']:.2e}, dual_feas={kkt['dual_feasibility']:.2e}")
+                        print(f"      comp_slack={kkt['complementary_slackness']:.2e}, min_eig_W={kkt['min_eig_W']:.2e}, min_eig_grad={kkt['min_eig_grad']:.2e}")
+                    
+                    # Last round
+                    last_round = model.convergence_history[-1]
+                    if 'pgd' in last_round and 'kkt' in last_round['pgd']:
+                        kkt = last_round['pgd']['kkt']
+                        print(f"    Round {len(model.convergence_history)-1} (last):")
+                        print(f"      is_optimum={kkt['is_optimum']}, primal_feas={kkt['primal_feasibility']:.2e}, dual_feas={kkt['dual_feasibility']:.2e}")
+                        print(f"      comp_slack={kkt['complementary_slackness']:.2e}, min_eig_W={kkt['min_eig_W']:.2e}, min_eig_grad={kkt['min_eig_grad']:.2e}")
+                
+                # Print measurement details
+                if hasattr(model, 'entry_to_rounds'):
+                    print(f"\n  Measurement tracking (entry_to_rounds):")
+                    for (i, j), rounds in sorted(model.entry_to_rounds.items()):
+                        meas_val = model.measurements.get((i, j), np.nan)
+                        noise_std = model.noise_scales.get((i, j), np.nan)
+                        print(f"    ({i},{j}): rounds={rounds}, value={meas_val:.6f}, noise_std={noise_std:.6e}")
+                
+                # SAVE AFTER EACH TRIAL
+                save_results(results, output_file)
+                
+            except Exception as e:
+                print(f"Error in trial {trial + 1}: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                # Still save what we have so far
+                save_results(results, output_file)
+                continue
+
+        # Save covariance matrices for this rho to .npz
+        if rho_covariance_matrices:
+            npz_path = os.path.join(matrices_dir, f'{dataset_name}_rho{rho}.npz')
+            np.savez(npz_path, **rho_covariance_matrices)
+            print(f"  → Covariance matrices saved to {npz_path}")
+
+    print(f"\n{'='*80}")
+    print(f"All results saved to {output_file}")
+    print(f"{'='*80}")
+    
+    # Save measurements to JSON file (prefixed with dataset name)
+    dataset_prefix = data_name if data_type == 'real' else 'synthetic'
+    measurements_output_file = os.path.join(output_dir, f'{dataset_prefix}_measurements.out')
+    save_measurements(all_measurements, measurements_output_file)
+    print(f"Measurements saved to {measurements_output_file}")
+    
+    return results
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Run annealing experiments')
+    parser.add_argument('--data-type', type=str, default='synthetic', choices=['synthetic', 'real'],
+                        help='Type of data to use')
+    parser.add_argument('--data-name', type=str, default=None,
+                        help='Name of real dataset (required if data-type=real)')
+    parser.add_argument('--d', type=int, default=10,
+                        help='Dimension for synthetic data')
+    parser.add_argument('--n', type=int, default=1000,
+                        help='Number of samples for synthetic data')
+    parser.add_argument('--rho-values', nargs='+', type=float, default=[0.1, 1.0, 10.0],
+                        help='Privacy budget values to test')
+    parser.add_argument('--alpha', type=float, default=0.2,
+                        help='Budget split parameter')
+    parser.add_argument('--max-rounds-pct', type=float, default=0.2,
+                        help='Maximum rounds as percentage of off-diagonal entries (default: 0.2 for 20%%)')
+    parser.add_argument('--n-trials', type=int, default=1,
+                        help='Number of trials per configuration')
+    parser.add_argument('--sensitivity-type', type=str, default='linf', choices=['l2', 'linf'],
+                        help='Sensitivity type')
+    parser.add_argument('--allow-remeasurement', action='store_true', default=False,
+                        help='Allow remeasuring entries')
+    parser.add_argument('--no-remeasurement', action='store_true', default=False,
+                        help='Disable remeasuring entries (explicit flag)')
+    parser.add_argument('--output-dir', type=str, default='results/linesearch',
+                        help='Output directory for results (default: results/linesearch)')
+    parser.add_argument('--optimizer', type=str, default='pgd_maxent_solver',
+                        choices=['pgd_maxent_solver', 'pgd_nocc', 'pgd_nocc_fu1', 'pgd_nocc_fu10', 'pgd_nocc_fu100', 'pgd_nocc_fu1000',
+                                 'pgd_pure', 'pgd_pure_fu1', 'pgd_pure_fu10', 'pgd_pure_fu100', 'pgd_pure_fu1000',
+                                 'pgd-maxent', 'ipm_chol', 'ipm_chol_nocc', 'ipm_chol_sparse', 'lbfgs'],
+                        help='Optimization method to use (default: pgd_maxent_solver; pgd_nocc_fu{N} sets fill_unobserved=N)')
+    parser.add_argument('--seed', type=int, default=42,
+                        help='Random seed')
+    parser.add_argument('--regression', action='store_true', default=False,
+                        help='Run regression evaluation (requires target as last column)')
+    parser.add_argument('--beta', type=float, default=0.1,
+                        help='Fraction of per-round budget for selection vs measurement (default: 0.1)')
+    parser.add_argument('--target-budget-frac', type=float, default=0.0,
+                        help='Fraction of PACE-GGM budget dedicated to target pairs at round 0 (default: 0.0 = standard)')
+    parser.add_argument('--ssp-target-frac', type=float, default=0.0,
+                        help='Fraction of SSP budget dedicated to X^Ty cross-covariance (default: 0.0 = standard joint SSP)')
+    parser.add_argument('--private-mean', action='store_true', default=False,
+                        help='Use private mean: split rho equally between mean estimation and covariance estimation')
+    parser.add_argument('--ridge-lambda', type=float, default=0.0,
+                        help='Ridge regularization lambda added to XTX before PACE-GGM regression solve (default: 0.0)')
+
+    args = parser.parse_args()
+    
+    # Handle remeasurement flags
+    if args.no_remeasurement:
+        allow_remeasurement = False
+    else:
+        allow_remeasurement = args.allow_remeasurement
+    
+    # Validate arguments
+    if args.data_type == 'real' and args.data_name is None:
+        parser.error("--data-name is required when --data-type=real")
+    
+    print("="*80)
+    print("ANNEALING ITERATIVE PRIVATE GGM EXPERIMENTS")
+    print("="*80)
+    print(f"Data type: {args.data_type}")
+    if args.data_type == 'real':
+        print(f"Dataset: {args.data_name}")
+    else:
+        print(f"Dimension: {args.d}")
+        print(f"Samples: {args.n}")
+    print(f"Rho values: {args.rho_values}")
+    print(f"Alpha: {args.alpha}")
+    print(f"Max rounds: {args.max_rounds_pct*100:.0f}% of off-diagonal entries")
+    print(f"Trials: {args.n_trials}")
+    print(f"Sensitivity type: {args.sensitivity_type}")
+    print(f"Allow remeasurement: {allow_remeasurement}")
+    print(f"Optimizer: {args.optimizer}")
+    print(f"Seed: {args.seed}")
+    print(f"Regression: {args.regression}")
+    print(f"Private mean: {args.private_mean}")
+    print("="*80)
+
+    run_experiment(
+        data_type=args.data_type,
+        data_name=args.data_name,
+        d=args.d,
+        n=args.n,
+        rho_values=args.rho_values,
+        alpha=args.alpha,
+        max_rounds_pct=args.max_rounds_pct,
+        n_trials=args.n_trials,
+        sensitivity_type=args.sensitivity_type,
+        allow_remeasurement=allow_remeasurement,
+        output_dir=args.output_dir,
+        optimizer=args.optimizer,
+        seed=args.seed,
+        regression=args.regression,
+        target_budget_fraction=args.target_budget_frac,
+        ssp_target_frac=args.ssp_target_frac,
+        beta=args.beta,
+        private_mean=args.private_mean,
+        ridge_lambda=args.ridge_lambda,
+    )
