@@ -107,7 +107,6 @@ Run after Steps 1 and 2:
 ```bash
 python -m experiments.main_plotting_function results/neurips_5datasets \
     --privcovariance-folder results/neurips_privcov_baselines \
-    --no-coinpress \
     --n-per-plot 5 \
     --output-tag neurips_5datasets_with_baselines
 ```

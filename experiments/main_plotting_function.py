@@ -233,7 +233,7 @@ if __name__ == "__main__":
                         help='Third privcovariance folder to overlay CoinPress with yet another label')
     parser.add_argument('--no-adaptivecov', action='store_true', default=False,
                         help='Skip AdaptiveCov line even when --privcovariance-folder is set')
-    parser.add_argument('--no-coinpress', action='store_true', default=False,
+    parser.add_argument('--no-coinpress', action='store_true', default=True,
                         help='Skip all CoinPress lines even when --privcovariance-folder is set')
     parser.add_argument('--ablation-fill', action='store_true', default=False,
                         help='Ablation plot: fill_unobserved comparison. results_folder must be '
