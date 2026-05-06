@@ -8,9 +8,7 @@ Python 3.10+ is recommended. Install dependencies via pip:
 pip install numpy scipy scikit-learn pandas matplotlib networkx jax optax
 ```
 
-**Optional — CoinPress/AdaptiveCov baselines only:**
-
-These baselines require PyTorch and the [PrivateCovariance](https://github.com/hkustDB/PrivateCovariance) library:
+**Optional — AdaptiveCov/CoinPress baselines only:**
 
 ```bash
 pip install torch
@@ -24,24 +22,39 @@ export PRIVATE_COV_REPO=/path/to/PrivateCovariance
 privateggm/          # Core library
   model.py           # PACE-GGM annealing algorithm
   privacy.py         # Gaussian mechanism, SSP, private mean
-  baselines.py       # AdaSSP, IHM, diagonal regression, AdaptiveCov, CoinPress
-  solvers/           # IPM (default), PGD-MaxEnt, Clarabel
+  baselines.py       # AdaSSP, diagonal regression, AdaptiveCov, CoinPress wrappers
+  solvers/           # IPM (default), PGD-MaxEnt
   data.py, data_reg.py, regression.py, utils.py
 
 experiments/
   test_iterative_annealing.py      # Main experiment runner (covariance + regression)
   run_privcovariance_baselines.py  # AdaptiveCov / CoinPress baseline runner
-  run_regression_baselines.py      # IHM / CoinPress regression baseline runner
   main_plotting_function.py        # Covariance estimation plots
   reg_plotting_function.py         # Regression MSE plots
 
-data/                # Dataset CSVs and target column mapping
-privateggm/sbatch/   # SLURM job scripts
+data/                              # Dataset CSVs and target column mapping
+privateggm/sbatch/                 # SLURM job scripts (see Step 1–3 below)
 ```
 
-## Running the main experiment
+---
 
-From the repository root:
+## Reproducing the experiments
+
+All experiments save results to a `results/` folder in the repository root.
+Run from the repository root with the conda environment activated.
+
+### Step 1 — Covariance estimation (PACE-GGM vs SSP vs Independent)
+
+```bash
+sbatch privateggm/sbatch/sbatch_neurips_5datasets.sh
+```
+
+Runs PACE-GGM on all 5 datasets (adult, thyroid_ann, ibm, bank32nh, communities_crime).
+Results saved to `results/neurips_5datasets/`.
+
+> **Note:** `communities_crime` uses `--max-rounds-pct 0.5` due to its high dimensionality (d=102); all others use `--max-rounds-pct 2.0`.
+
+To run a single dataset manually:
 
 ```bash
 python -m experiments.test_iterative_annealing \
@@ -50,56 +63,76 @@ python -m experiments.test_iterative_annealing \
     --alpha 0.3 --beta 0.5 --max-rounds-pct 2.0 \
     --n-trials 10 --sensitivity-type linf \
     --allow-remeasurement --optimizer ipm_chol \
-    --output-dir results/my_run --seed 42
+    --output-dir results/neurips_5datasets --seed 42
 ```
 
-Replace `adult` with any dataset name in `data/`. Available datasets: `adult`, `thyroid_ann`, `ibm`, `bank32nh`, `communities_crime`.
-
-**Key arguments:**
-
-| Argument | Description |
-|---|---|
-| `--rho-values` | Privacy budgets ρ (zCDP) to evaluate |
-| `--alpha` | Annealing parameter α (fraction of budget per select round) |
-| `--beta` | Annealing parameter β (fraction of budget per measure round) |
-| `--max-rounds-pct` | Max rounds as a fraction of off-diagonal entries |
-| `--n-trials` | Number of independent trials per ρ |
-| `--optimizer` | Solver: `ipm_chol` (default, recommended) or `pgd_maxent_solver` |
-| `--allow-remeasurement` | Enable adaptive re-measurement of entries |
-| `--regression` | Also run linear regression evaluation |
-| `--private-mean` | Split ρ 50/50 between mean and covariance estimation |
-
-**SLURM:** To run all 5 datasets on a cluster:
-
-```bash
-sbatch privateggm/sbatch/sbatch_neurips_5datasets.sh
-```
-
-## Running covariance baselines (AdaptiveCov / CoinPress)
+### Step 2 — Covariance baselines (AdaptiveCov / CoinPress)
 
 Requires `PRIVATE_COV_REPO` to be set (see Requirements above).
 
 ```bash
-python -m experiments.run_privcovariance_baselines \
-    --datasets adult thyroid_ann ibm bank32nh communities_crime \
-    --rho-values 0.0001 0.001 0.01 0.1 1.0 2.0 10.0 \
-    --n-trials 10 --coinpress-t 4 --private-mean \
-    --output-dir results/baselines --seed 42
+sbatch privateggm/sbatch/sbatch_neurips_privcov_baselines.sh
 ```
+
+Results saved to `results/neurips_privcov_baselines/`.
+
+### Step 3 — Regression (PACE-GGM vs SSP vs AdaSSP)
+
+```bash
+sbatch privateggm/sbatch/sbatch_neurips_5datasets_reg.sh
+```
+
+Runs regression on adult, bank32nh, ibm, communities_crime (80/20 train/test split).
+Results saved to `results/neurips_5datasets_reg/`.
+
+---
 
 ## Plotting
 
-**Covariance estimation:**
+### Covariance estimation plot (with AdaptiveCov overlay)
+
+Run after Steps 1 and 2:
 
 ```bash
-python -m experiments.main_plotting_function results/my_run \
-    --privcovariance-folder results/baselines \
-    --output-dir results/my_run --output-tag my_plots
+python -m experiments.main_plotting_function results/neurips_5datasets \
+    --privcovariance-folder results/neurips_privcov_baselines \
+    --no-coinpress \
+    --n-per-plot 5 \
+    --output-tag neurips_5datasets_with_baselines
 ```
 
-**Regression MSE:**
+To plot PACE-GGM, SSP and Independent only (no baselines):
 
 ```bash
-python -m experiments.reg_plotting_function results/my_run \
-    --stat se --n-rows 2 --n-per-plot 5
+python -m experiments.main_plotting_function results/neurips_5datasets \
+    --n-per-plot 5 --output-tag neurips_5datasets
 ```
+
+### Regression plot
+
+Run after Step 3:
+
+```bash
+# PACE-GGM vs AdaSSP
+python -m experiments.reg_plotting_function results/neurips_5datasets_reg \
+    --stat se --no-ssp --suffix _adassp
+
+# PACE-GGM vs SSP
+python -m experiments.reg_plotting_function results/neurips_5datasets_reg \
+    --stat se --no-adassp --suffix _ssp
+```
+
+Plots are saved alongside the results in `results/neurips_5datasets_reg/`.
+
+---
+
+## Key hyperparameters
+
+| Argument | Value used | Description |
+|---|---|---|
+| `--alpha` | 0.3 | Fraction of budget per select round |
+| `--beta` | 0.5 | Fraction of budget per measure round |
+| `--n-trials` | 10 | Independent trials per ρ |
+| `--sensitivity-type` | `linf` | L∞ clipping |
+| `--optimizer` | `ipm_chol` | Interior point solver (recommended) |
+| `--seed` | 42 | Global random seed |
