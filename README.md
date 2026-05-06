@@ -2,11 +2,15 @@
 
 ## Requirements
 
-Python 3.10+ is recommended. Install dependencies via pip:
+Python 3.10+ is recommended. Clone the repository and install:
 
 ```bash
-pip install numpy scipy scikit-learn pandas matplotlib networkx jax optax
+git clone <repo-url>
+cd private-ggm
+pip install -e .
 ```
+
+This installs all required dependencies and makes `privateggm` and `experiments` importable from anywhere.
 
 **Optional — AdaptiveCov/CoinPress baselines only:**
 
