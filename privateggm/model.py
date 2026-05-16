@@ -1300,12 +1300,11 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
                 self.Sigma_tilde[i,j] = updated_measurement
                 self.Sigma_tilde[j,i] = updated_measurement
                 self.measurements[(i,j)] = updated_measurement
-                self.noise_scales[(i,j)] = np.sqrt(updated_sigma2)
+                self.noise_scales[(i,j)] = np.sqrt(updated_sigma2)  # IVM combined std (used by solver)
                 self.noise_scales[(j,i)] = np.sqrt(updated_sigma2)
                 self.entry_to_rounds[(i,j)].append(round_num)  # Track remeasurement
                 self.entry_to_noise_scales[(i,j)].append(new_noise_scale)  # Raw noise scale for this round
-
-                new_noise_scale = np.sqrt(updated_sigma2) # TO DO check if it needs to be the updated or raw one
+                # new_noise_scale keeps the raw round std — used below for annealing threshold
 
             else:
 
