@@ -34,13 +34,15 @@ def plot_results_from_folder(results_dir, exclude_datasets=None):
 
 
 def load_rho_data(data, rho_values):
-    """Extract per-rho means/stds for annealing, baseline, ssp from a loaded JSON."""
+    """Extract per-rho means/stds for annealing, baseline, ssp, random_baseline from a loaded JSON."""
     ann_frob_m, ann_frob_s = [], []
     ann_mah_m,  ann_mah_s  = [], []
     bas_frob_m, bas_frob_s = [], []
     bas_mah_m,  bas_mah_s  = [], []
     ssp_frob_m, ssp_frob_s = [], []
     ssp_mah_m,  ssp_mah_s  = [], []
+    rb_frob_m,  rb_frob_s  = [], []
+    rb_mah_m,   rb_mah_s   = [], []
     valid_rhos = []
 
     for rho in rho_values:
@@ -57,6 +59,8 @@ def load_rho_data(data, rho_values):
         bas_mah  = [t['baseline']['mahalanobis_error'] for t in trials if t['baseline']['mahalanobis_error'] is not None]
         ssp_frob = [t['ssp']['frobenius_error'] for t in trials]
         ssp_mah  = [t['ssp']['mahalanobis_error'] for t in trials]
+        rb_frob  = [t['random_baseline']['frobenius_error'] for t in trials if 'random_baseline' in t]
+        rb_mah   = [t['random_baseline']['mahalanobis_error'] for t in trials if 'random_baseline' in t]
 
         ann_frob_m.append(np.mean(ann_frob)); ann_frob_s.append(np.std(ann_frob))
         ann_mah_m.append(np.mean(ann_mah));   ann_mah_s.append(np.std(ann_mah))
@@ -70,6 +74,13 @@ def load_rho_data(data, rho_values):
             bas_frob_m.append(np.nan); bas_frob_s.append(0)
             bas_mah_m.append(np.nan);  bas_mah_s.append(0)
 
+        if rb_frob:
+            rb_frob_m.append(np.mean(rb_frob)); rb_frob_s.append(np.std(rb_frob))
+            rb_mah_m.append(np.mean(rb_mah));   rb_mah_s.append(np.std(rb_mah))
+        else:
+            rb_frob_m.append(np.nan); rb_frob_s.append(0)
+            rb_mah_m.append(np.nan);  rb_mah_s.append(0)
+
         valid_rhos.append(rho)
 
     return (np.array(valid_rhos),
@@ -78,10 +89,12 @@ def load_rho_data(data, rho_values):
             np.array(bas_frob_m), np.array(bas_frob_s),
             np.array(bas_mah_m),  np.array(bas_mah_s),
             np.array(ssp_frob_m), np.array(ssp_frob_s),
-            np.array(ssp_mah_m),  np.array(ssp_mah_s))
+            np.array(ssp_mah_m),  np.array(ssp_mah_s),
+            np.array(rb_frob_m),  np.array(rb_frob_s),
+            np.array(rb_mah_m),   np.array(rb_mah_s))
 
 
-def load_ablation_data(data, rho_values):
+def load_ablation_data(data, rho_values, trim_outliers=0):
     """Extract per-rho mahalanobis error, frobenius error, total solver runtime, and mean per-round solver runtime."""
     mah_m, mah_s, frob_m, frob_s, rt_m, rt_s, rt_per_m, rt_per_s, valid_rhos = [], [], [], [], [], [], [], [], []
     for rho in rho_values:
@@ -104,6 +117,14 @@ def load_ablation_data(data, rho_values):
             rts_per.append(np.mean(ipm_times) if ipm_times else 0.0)
         if not mahs:
             continue
+        if trim_outliers > 0 and len(rts) > trim_outliers:
+            # Trim by solver time — apply same mask to all metrics for consistency
+            sorted_idx = np.argsort(rts)
+            keep = sorted_idx[:-trim_outliers]
+            mahs    = [mahs[i]    for i in keep]
+            frobs   = [frobs[i]   for i in keep]
+            rts_per = [rts_per[i] for i in keep]
+            rts     = [rts[i]     for i in keep]
         mah_m.append(np.mean(mahs));       mah_s.append(np.std(mahs))
         frob_m.append(np.mean(frobs));     frob_s.append(np.std(frobs))
         rt_m.append(np.mean(rts));         rt_s.append(np.std(rts))
@@ -223,6 +244,8 @@ if __name__ == "__main__":
                         help='Cap y-axis at max(SSP) * this factor on Mahalanobis and Frobenius rows')
     parser.add_argument('--no-independent', action='store_true', default=False,
                         help='Omit the Independent baseline from the plot')
+    parser.add_argument('--no-random-baseline', action='store_true', default=False,
+                        help='Omit the Random Selection baseline from the plot')
     parser.add_argument('--privcovariance-folder', type=str, default=None,
                         help='Folder with privcovariance_*.json files to overlay '
                              'AdaptiveCov and CoinPress lines on Mahalanobis/Frobenius plots')
@@ -238,6 +261,9 @@ if __name__ == "__main__":
     parser.add_argument('--ablation-fill', action='store_true', default=False,
                         help='Ablation plot: fill_unobserved comparison. results_folder must be '
                              'the parent dir containing fu0/fu1/fu10/fu100/fu1000/ipm subfolders.')
+    parser.add_argument('--ablation-cc', action='store_true', default=False,
+                        help='Ablation plot: IPM with vs without Cholesky. results_folder must be '
+                             'the parent dir containing ipm_cc and ipm_nocc subfolders.')
     args = parser.parse_args()
 
     if args.mse_only:
@@ -310,7 +336,8 @@ if __name__ == "__main__":
 
                 (rhos, af_m, af_s, am_m, am_s,
                  bf_m, bf_s, bm_m, bm_s,
-                 sf_m, sf_s, sm_m, sm_s) = load_rho_data(data, rho_values)
+                 sf_m, sf_s, sm_m, sm_s,
+                 rbf_m, rbf_s, rbm_m, rbm_s) = load_rho_data(data, rho_values)
 
                 if len(rhos) == 0:
                     raise ValueError("No valid rho values")
@@ -330,9 +357,11 @@ if __name__ == "__main__":
                     if not np.all(np.isnan(bm_m)) and not args.no_independent:
                         plot_line(ax0, rhos, bm_m, bm_s, '#2ca02c', 'Independent', linestyle='--', marker='^', clip_log=True)
                     plot_line(ax0, rhos, sm_m, sm_s, '#d62728', 'SSP', marker='s', clip_log=True)
+                    if not args.no_random_baseline and not np.all(np.isnan(rbm_m)):
+                        plot_line(ax0, rhos, rbm_m, rbm_s, '#9467bd', 'Random', linestyle='--', marker='x', clip_log=True)
 
                     if has_compare and cmp_data is not None:
-                        (rhos2, _, _, am2_m, am2_s, _, _, _, _, _, _, _, _) = load_rho_data(cmp_data, rho_values)
+                        (rhos2, _, _, am2_m, am2_s, _, _, _, _, _, _, _, _, _, _, _, _) = load_rho_data(cmp_data, rho_values)
                         if len(rhos2) > 0:
                             plot_line(ax0, rhos2, am2_m, am2_s, '#1f77b4',
                                       f'PACE-GGM ({args.compare_label})', linestyle='--', clip_log=True)
@@ -398,9 +427,11 @@ if __name__ == "__main__":
                     if not np.all(np.isnan(bf_m)) and not args.no_independent:
                         plot_line(ax1, rhos, bf_m, bf_s, '#2ca02c', 'Independent', linestyle='--', marker='^', clip_log=True)
                     plot_line(ax1, rhos, sf_m, sf_s, '#d62728', 'SSP', marker='s', clip_log=True)
+                    if not args.no_random_baseline and not np.all(np.isnan(rbf_m)):
+                        plot_line(ax1, rhos, rbf_m, rbf_s, '#9467bd', 'Random', linestyle='--', marker='x', clip_log=True)
 
                     if has_compare and cmp_data is not None:
-                        (rhos2, af2_m, af2_s, _, _, _, _, _, _, _, _, _, _) = load_rho_data(cmp_data, rho_values)
+                        (rhos2, af2_m, af2_s, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = load_rho_data(cmp_data, rho_values)
                         if len(rhos2) > 0:
                             plot_line(ax1, rhos2, af2_m, af2_s, '#1f77b4',
                                       f'PACE-GGM ({args.compare_label})', linestyle='--', clip_log=True)
@@ -636,7 +667,7 @@ if __name__ == "__main__":
                     data = json.load(f)
                 d_val = data['parameters'].get('d', '?')
                 rhos_i, mah_m, mah_s, frob_m, frob_s, rt_m, rt_s, rtp_m, rtp_s = \
-                    load_ablation_data(data, rho_values)
+                    load_ablation_data(data, rho_values, trim_outliers=0)
                 if len(rhos_i) == 0:
                     continue
                 for ax_row, (ym, ys) in enumerate([(mah_m, mah_s), (frob_m, frob_s), (rt_m, rt_s)]):
@@ -672,6 +703,67 @@ if __name__ == "__main__":
         plt.savefig(out_pdf, dpi=300, bbox_inches='tight')
         plt.savefig(out_png, dpi=300, bbox_inches='tight')
         print(f"Fill ablation plot saved: {out_png}")
+        plt.close()
+
+    if args.ablation_cc:
+        parent = Path(args.results_folder)
+        cc_configs = [
+            ('ipm_cc',   'IPM (with CC)',    '#1f77b4', '-',  'o'),
+            ('ipm_nocc', 'IPM (no CC)',      '#d62728', '--', 's'),
+        ]
+        abl_datasets = args.ablation_datasets or ['adult', 'LifeExpectancy', 'bank32nh', 'spambase', 'communities_crime']
+
+        n_cols = len(abl_datasets)
+        fig, axes = plt.subplots(3, n_cols, figsize=(n_cols * 2.8, 3 * 2.8), squeeze=False)
+        fig.subplots_adjust(hspace=0.45, wspace=0.4)
+
+        for col_idx, ds_name in enumerate(abl_datasets):
+            d_val = '?'
+            for fu, label, color, ls, marker in cc_configs:
+                folder = parent / fu
+                files = list(folder.glob(f'annealing_privacy_analysis_{ds_name}_*.json'))
+                if not files:
+                    continue
+                with open(files[0]) as f:
+                    data = json.load(f)
+                d_val = data['parameters'].get('d', '?')
+                rhos_i, mah_m, mah_s, frob_m, frob_s, rt_m, rt_s, rtp_m, rtp_s = \
+                    load_ablation_data(data, rho_values, trim_outliers=0)
+                if len(rhos_i) == 0:
+                    continue
+                for ax_row, (ym, ys) in enumerate([(mah_m, mah_s), (frob_m, frob_s), (rt_m, rt_s)]):
+                    ax = axes[ax_row, col_idx]
+                    ax.plot(rhos_i, ym, marker=marker, label=label, linewidth=1.5,
+                            markersize=5, color=color, linestyle=ls)
+                    lo = ym - ys
+                    if ax_row < 2:
+                        lo = np.maximum(lo, ym * 1e-3)
+                    ax.fill_between(rhos_i, lo, ym + ys, alpha=0.15, color=color)
+
+            row_labels = ['Mahalanobis Error', 'Frobenius Error', 'Total Solver Time (s)']
+            for ax_row in range(3):
+                ax = axes[ax_row, col_idx]
+                ax.set_xscale('log')
+                if ax_row < 2:
+                    ax.set_yscale('log')
+                ax.set_box_aspect(1)
+                ax.tick_params(labelsize=8)
+                ax.grid(False)
+                if ax_row == 0:
+                    ax.set_title(f"{ds_name}\n(d={d_val})", fontsize=9, fontweight='bold')
+                if ax_row == 2:
+                    ax.set_xlabel('ρ', fontsize=9, fontweight='bold')
+                if col_idx == 0:
+                    ax.set_ylabel(row_labels[ax_row], fontsize=9, fontweight='bold')
+                    if ax_row == 0:
+                        ax.legend(loc='best', fontsize=6, framealpha=0.9)
+
+        abl_tag = args.output_tag or 'ablation_cc'
+        out_pdf = output_dir / f'{abl_tag}.pdf'
+        out_png = output_dir / f'{abl_tag}.png'
+        plt.savefig(out_pdf, dpi=300, bbox_inches='tight')
+        plt.savefig(out_png, dpi=300, bbox_inches='tight')
+        print(f"CC ablation plot saved: {out_png}")
         plt.close()
 
     print(f"\nAll plots saved to: {output_dir}")

@@ -22,7 +22,7 @@ from privateggm.utils import (
     frobenius_error
 )
 from privateggm.privacy import SSP_covariance, cov_sensitivity_l2, cov_sensitivity_linf, cov_jk_sensitivity_l2, cov_jk_sensitivity_linf, gaussian_mechanism, privatize_mean
-from privateggm.baselines import diagonal_XTy_regression, AdaSSP_linear_regression, private_min_eigenvalue_ridge_zcdp
+from privateggm.baselines import diagonal_XTy_regression, AdaSSP_linear_regression, private_min_eigenvalue_ridge_zcdp, random_selection_baseline
 
 
 def save_results(results, output_file):
@@ -62,6 +62,7 @@ def run_experiment(
     beta=0.1,
     private_mean=False,
     ridge_lambda=0.0,
+    random_baseline=False,
 ):
     """
     Run annealing experiments.
@@ -610,6 +611,35 @@ def run_experiment(
                 save_results(results, output_file)
                 continue
 
+        # --- Random selection baseline (second pass, uses avg K_off across trials) ---
+        if random_baseline:
+            rho_trials = results['results'][rho]
+            k_offdiag_per_trial = [
+                max(0, len(t['annealing']['measurements']) - d)
+                for t in rho_trials
+                if 'annealing' in t and 'measurements' in t['annealing']
+            ]
+            n_offdiag_avg = int(round(np.mean(k_offdiag_per_trial))) if k_offdiag_per_trial else 0
+            print(f"\n  [Random baseline] rho={rho}: avg K_off={n_offdiag_avg} across {len(k_offdiag_per_trial)} trials")
+
+            for trial_idx, trial_result in enumerate(rho_trials):
+                trial_rng = np.random.default_rng(seed + trial_idx + int(rho * 1e6))
+                rb = random_selection_baseline(
+                    rng=trial_rng,
+                    X=X,
+                    Sigma_true=Sigma_true,
+                    d=d, n=X.shape[0],
+                    rho=rho,
+                    alpha=alpha,
+                    n_offdiag=n_offdiag_avg,
+                    sensitivity_type=sensitivity_type,
+                    norm_bound=T,
+                )
+                trial_result['random_baseline'] = rb
+                print(f"    trial {trial_idx}: mah={rb['mahalanobis_error']:.4f}, frob={rb['frobenius_error']:.4f}")
+
+            save_results(results, output_file)
+
         # Save covariance matrices for this rho to .npz
         if rho_covariance_matrices:
             npz_path = os.path.join(matrices_dir, f'{dataset_name}_rho{rho}.npz')
@@ -674,6 +704,9 @@ if __name__ == '__main__':
                         help='Use private mean: split rho equally between mean estimation and covariance estimation')
     parser.add_argument('--ridge-lambda', type=float, default=0.0,
                         help='Ridge regularization lambda added to XTX before PACE-GGM regression solve (default: 0.0)')
+    parser.add_argument('--random-baseline', action='store_true', default=False,
+                        help='Run random selection baseline after all PACE-GGM trials, '
+                             'using avg number of off-diagonal measurements across trials per rho')
 
     args = parser.parse_args()
     
@@ -728,4 +761,5 @@ if __name__ == '__main__':
         beta=args.beta,
         private_mean=args.private_mean,
         ridge_lambda=args.ridge_lambda,
+        random_baseline=args.random_baseline,
     )

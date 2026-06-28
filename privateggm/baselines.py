@@ -4,7 +4,7 @@ from math import exp, sqrt
 from scipy.special import erf
 import scipy.optimize
 from types import SimpleNamespace
-from privateggm.privacy import cov_jk_sensitivity_linf, SSP_gradient, gaussian_mechanism
+from privateggm.privacy import cov_jk_sensitivity_linf, cov_jk_sensitivity_l2, SSP_gradient, gaussian_mechanism
 
 # ── PrivateCovariance repo wrappers ───────────────────────────────────────────
 # Clone https://github.com/hkustDB/PrivateCovariance and set this path, or
@@ -611,3 +611,74 @@ def coinpress_regression(X_train, y_train, rho, T, r=None, t=1, xty_frac=0.5, rn
 
     beta, _, _, _ = np.linalg.lstsq(Sigma_XX_dp, Sigma_Xy_dp, rcond=None)
     return beta
+
+
+def random_selection_baseline(rng, X, Sigma_true, d, n, rho, alpha,
+                               n_offdiag, sensitivity_type, norm_bound):
+    """
+    Random selection baseline for covariance estimation.
+
+    Measures all d diagonal entries (same budget as PACE-GGM round 0), then
+    randomly selects n_offdiag off-diagonal entries from the lower triangle and
+    measures them with the remaining budget. Reconstructs with IPM (ipm_chol).
+
+    Budget:
+        diagonal:    rho * alpha / d  per entry  (matches PACE-GGM)
+        off-diagonal: rho * (1 - alpha) / n_offdiag  per entry
+    """
+    from privateggm.solve import solve as ggm_solve
+    from privateggm.utils import mahalanobis_cov_error, frobenius_error
+
+    X_centered = X - X.mean(axis=0)
+    empirical_cov = X_centered.T @ X_centered / n
+
+    if sensitivity_type == 'linf':
+        sensitivity = cov_jk_sensitivity_linf(n, norm_bound)
+    else:
+        sensitivity = cov_jk_sensitivity_l2(n, norm_bound)
+
+    rho_per_diag    = rho * alpha / d
+    rho_per_offdiag = rho * (1 - alpha) / n_offdiag if n_offdiag > 0 else 0.0
+
+    Sigma_tilde  = np.zeros((d, d))
+    noise_scales = np.zeros((d, d))
+
+    # Measure diagonal
+    for i in range(d):
+        noisy_val, _, sigma = gaussian_mechanism(rng, empirical_cov[i, i], sensitivity, rho_per_diag)
+        Sigma_tilde[i, i]  = noisy_val
+        noise_scales[i, i] = sigma
+
+    # Randomly select and measure off-diagonal entries
+    if n_offdiag > 0:
+        lower_tri  = [(i, j) for i in range(d) for j in range(i)]
+        k          = min(n_offdiag, len(lower_tri))
+        chosen_idx = rng.choice(len(lower_tri), size=k, replace=False)
+        for idx in chosen_idx:
+            i, j = lower_tri[idx]
+            noisy_val, _, sigma = gaussian_mechanism(rng, empirical_cov[i, j], sensitivity, rho_per_offdiag)
+            Sigma_tilde[i, j]  = noisy_val
+            Sigma_tilde[j, i]  = noisy_val
+            noise_scales[i, j] = sigma
+            noise_scales[j, i] = sigma
+
+    # Solve with ipm
+    measured = noise_scales > 0
+    rows, cols = np.where(measured)
+    vals = Sigma_tilde[rows, cols]
+    tau  = noise_scales[rows, cols]
+
+    try:
+        Sigma_est, _ = ggm_solve(
+            rows, cols, vals, tau, d, solver='ipm_chol',
+            mu_init=1.0, mu_factor=0.5, eps=1e-8,
+            max_outer=40, max_inner=200, decompose='blocks'
+        )
+    except Exception as e:
+        print(f"  WARNING: random_selection_baseline IPM failed ({e}), using empirical cov")
+        Sigma_est = empirical_cov
+
+    return {
+        'mahalanobis_error': float(mahalanobis_cov_error(Sigma_true, Sigma_est)),
+        'frobenius_error':   float(frobenius_error(Sigma_true, Sigma_est)),
+    }

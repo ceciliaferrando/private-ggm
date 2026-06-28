@@ -139,12 +139,12 @@ if __name__ == "__main__":
     for group_idx, dataset_group in enumerate(dataset_groups):
         n_cols = args.n_per_plot
         actual_rows = (len(dataset_group) + n_cols - 1) // n_cols
-        figsize_width = n_cols * 2.8
+        figsize_width = n_cols * 3.2
         figsize_height = actual_rows * 2.4
 
         fig = plt.figure(figsize=(figsize_width, figsize_height))
-        hspace = 0.6 if actual_rows > 1 else 0.4
-        gs = gridspec.GridSpec(actual_rows, n_cols, figure=fig, hspace=hspace, wspace=0.15)
+        hspace = 0.75 if actual_rows > 1 else 0.4
+        gs = gridspec.GridSpec(actual_rows, n_cols, figure=fig, hspace=hspace, wspace=-0.1)
 
         for plot_idx, (dataset_name, dim, d_val, display_name, filepath) in enumerate(dataset_group):
             row_idx = plot_idx // n_cols
@@ -205,7 +205,14 @@ if __name__ == "__main__":
                     ax.set_yscale('log')
                 if args.clip_ymax is not None and len(pace_c) > 0:
                     ax.set_ylim(top=np.nanmax(pace_c) * args.clip_ymax)
-                ax.yaxis.set_major_locator(plt.MaxNLocator(2))
+                ax.yaxis.set_minor_locator(plt.NullLocator())
+                # Force 3 evenly-spaced ticks in log space regardless of data range
+                ymin, ymax = ax.get_ylim()
+                if ymin > 0 and ymax > ymin:
+                    import matplotlib.ticker as mticker
+                    ticks = np.logspace(np.log10(ymin), np.log10(ymax), 3)
+                    ax.set_yticks(ticks)
+                    ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f'{x:.2g}'))
                 sparse_rhos = rho_values[::2]
                 ax.set_xticks(sparse_rhos)
                 ax.set_xticklabels([f'$10^{{{int(np.log10(r))}}}$' if np.log10(r) == int(np.log10(r)) else str(r)
