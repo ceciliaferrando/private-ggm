@@ -40,15 +40,22 @@ automatically — no extra flag needed.
 | Ailerons | 34 | 32G | 2.0 | ipm_chol |
 | spambase | 58 | 32G | 2.0 | ipm_chol |
 | communities_crime | 102 | 32G | 2.0 | ipm_chol |
-| madeline | 260 | 64G | 0.5 | ipm_chol_sparse |
+| madeline | 260 | 64G | 2.0 | ipm_chol_sparse |
 
-madeline uses the sparse solver and a reduced round budget, following the
-settings used for the earlier full runs. communities_crime uses 2.0 rather
-than the older 0.5 — that is what the recent 5-dataset runs used, where it
-completed in about 56 minutes.
+`max-rounds-pct` is uniform at 2.0. It is not binding for any dataset here —
+the privacy budget is exhausted first — so the value is effectively
+presentational. Note the flag is a raw multiplier on the off-diagonal entry
+count (`max_rounds = pct * d(d-1)/2`), not a percentage, despite the name
+and the `%` in its log line. For madeline that allows 67,340 rounds while
+runs actually stop near 272; the closest any dataset comes to the cap is
+adult, at 20 rounds against 30.
 
-Runtime scales steeply with d: the small datasets finish in minutes,
-communities_crime takes roughly an hour, madeline is the long pole.
+madeline uses the sparse solver, and that is the setting that matters for
+it: at essentially identical round counts, historical runs took 0.04-0.06h
+with `ipm_chol_sparse` versus 15.6-34.7h with dense `ipm_chol`.
+
+Runtime otherwise scales steeply with d: the small datasets finish in
+minutes, communities_crime takes roughly an hour.
 
 ## AdaptiveCov
 
