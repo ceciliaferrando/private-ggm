@@ -714,7 +714,8 @@ def verify_pgd_optimum(W, gradient, tol=1e-6):
 
 
 class IterativePrivateGGM:
-    def __init__(self, rng, d, rho, alpha, n_measurements, sensitivity_type, norm_bound, optimizer="pgd-maxent"):
+    def __init__(self, rng, d, rho, alpha, n_measurements, sensitivity_type, norm_bound, optimizer="pgd-maxent",
+                 weight_norm="max"):
         """
         Initialize Iterative Private GGM
         
@@ -736,7 +737,8 @@ class IterativePrivateGGM:
         self.sensitivity_type = sensitivity_type
         self.norm_bound = norm_bound
         self.optimizer = optimizer
-        
+        self.weight_norm = weight_norm
+
         # Split privacy budget
         # For now, only split for covariance. TO-D0: add mean if needed
         # self.rho_m = self.rho * alpha / 2  # mean estimation
@@ -1027,7 +1029,8 @@ class IterativePrivateGGM:
             Sigma_hat, convergence_hist = ggm_solve(
                 rows, cols, vals, tau, self.d, solver='ipm_chol',
                 mu_init=1.0, mu_factor=0.5, eps=1e-8,
-                max_outer=40, max_inner=200, decompose=decompose
+                max_outer=40, max_inner=200, decompose=decompose,
+                weight_norm=self.weight_norm
             )
 
             if not hasattr(self, 'convergence_history'):
@@ -1080,7 +1083,7 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
     
     def __init__(self, rng, d, rho, alpha, beta, max_rounds, sensitivity_type, norm_bound,
                  optimizer="pgd-maxent", anneal_threshold_factor=None, allow_remeasurement=True,
-                 target_budget_fraction=0.0, diag_noise_floor=False):
+                 target_budget_fraction=0.0, diag_noise_floor=False, weight_norm="max"):
         """
         Initialize Annealing Iterative Private GGM
         
@@ -1107,6 +1110,7 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
         self.allow_remeasurement = allow_remeasurement
         self.target_budget_fraction = target_budget_fraction
         self.diag_noise_floor = diag_noise_floor
+        self.weight_norm = weight_norm
 
         # Annealing threshold: diff <= threshold_factor * measurement_std triggers doubling
         self.anneal_threshold_factor = anneal_threshold_factor or np.sqrt(2 / np.pi)
@@ -1546,7 +1550,8 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
             Sigma_hat, convergence_hist = ggm_solve(
                 rows, cols, vals, tau, self.d, solver='ipm_chol',
                 mu_init=1.0, mu_factor=0.5, eps=1e-8,
-                max_outer=40, max_inner=200, decompose=decompose
+                max_outer=40, max_inner=200, decompose=decompose,
+                weight_norm=self.weight_norm
             )
             self.last_ipm_time = time.time() - _ipm_start
 

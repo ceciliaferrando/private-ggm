@@ -17,10 +17,21 @@ def project_psd(X, min_eig=0.0, thresh=1e-8, return_evals=False):
     return (X_proj, vals_c) if return_evals else X_proj
 
 
-def _weights(tau):
-    """Normalized weights w̃ = (1/τ²) / max(1/τ²)."""
+def _weights(tau, norm='max'):
+    """Normalized weights w̃ = (1/τ²) / norm(1/τ²).
+
+    'max' anchors the largest weight at 1, so a few high-precision entries
+    push every other weight toward 0 and the barrier term dominates them.
+    'median' anchors the bulk of the weights at 1 instead, preserving the
+    same inverse-variance ratios while keeping the objective's scale
+    independent of the weight spread.
+    """
     w = 1.0 / tau ** 2
-    return w / w.max()
+    if norm == 'median':
+        return w / np.median(w)
+    elif norm == 'max':
+        return w / w.max()
+    raise ValueError(f"Unknown weight normalization: {norm}")
 
 
 def _weighted_obj(X, rows, cols, vals, w):

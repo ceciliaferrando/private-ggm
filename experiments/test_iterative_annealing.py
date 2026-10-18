@@ -64,6 +64,7 @@ def run_experiment(
     ridge_lambda=0.0,
     random_baseline=False,
     diag_noise_floor=False,
+    weight_norm='max',
 ):
     """
     Run annealing experiments.
@@ -110,7 +111,9 @@ def run_experiment(
             'sensitivity_type': sensitivity_type,
             'allow_remeasurement': allow_remeasurement,
             'optimizer': optimizer,
-            'seed': seed
+            'seed': seed,
+            'diag_noise_floor': diag_noise_floor,
+            'weight_norm': weight_norm
         },
         'results': {}
     }
@@ -347,6 +350,7 @@ def run_experiment(
                     allow_remeasurement=allow_remeasurement,
                     target_budget_fraction=target_budget_fraction,
                     diag_noise_floor=diag_noise_floor,
+                    weight_norm=weight_norm,
                 )
 
                 Sigma_est = model.fit(X_trial, pre_centered=private_mean and regression)
@@ -687,6 +691,8 @@ if __name__ == '__main__':
                         help='Disable remeasuring entries (explicit flag)')
     parser.add_argument('--diag-noise-floor', action='store_true', default=False,
                         help='Floor diagonal noise scales passed to IPM at round-0 level')
+    parser.add_argument('--weight-norm', type=str, default='max', choices=['max', 'median'],
+                        help='Divisor for IPM inverse-variance weights (default: max)')
     parser.add_argument('--output-dir', type=str, default='results/linesearch',
                         help='Output directory for results (default: results/linesearch)')
     parser.add_argument('--optimizer', type=str, default='pgd_maxent_solver',
@@ -767,4 +773,5 @@ if __name__ == '__main__':
         ridge_lambda=args.ridge_lambda,
         random_baseline=args.random_baseline,
         diag_noise_floor=args.diag_noise_floor,
+        weight_norm=args.weight_norm,
     )

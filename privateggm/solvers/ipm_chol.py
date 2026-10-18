@@ -11,7 +11,7 @@ from ._shared import _weights, _weighted_obj, normalize_coo
 def ipm_chol(rows, cols, vals, tau, d,
              mu_init=1.0, mu_factor=0.5, eps=1e-8, eps_coarse=1e-2,
              max_outer=40, max_inner=200,
-             logdet_thresh=-np.inf):
+             logdet_thresh=-np.inf, weight_norm='max'):
     """
     IPM with Cholesky parameterization X = LL^T  (L lower triangular, L[i,i] > 0).
 
@@ -37,6 +37,12 @@ def ipm_chol(rows, cols, vals, tau, d,
     max_inner  : max inner L-BFGS steps per outer iteration
     logdet_thresh  : stop as soon as log det(X) drops below this value.
                      Default -inf (disabled).
+    weight_norm    : 'max' (default) or 'median' — divisor used to normalize
+                     the inverse-variance weights.  Because the objective is
+                     f(X_E) − μ log|X| with μ on a fixed schedule, the divisor
+                     sets how strong the barrier is relative to the data term.
+                     'median' keeps that ratio stable when a subset of entries
+                     is far more precise than the rest.
 
     Hist fields  (one entry per outer iteration)
     -----------
@@ -47,7 +53,7 @@ def ipm_chol(rows, cols, vals, tau, d,
     rows, cols, vals, tau = normalize_coo(rows, cols, vals, tau)
     diag_d = np.arange(d)
 
-    w   = _weights(tau)
+    w   = _weights(tau, norm=weight_norm)
     off = rows != cols
 
     tril_r, tril_c = np.tril_indices(d)
