@@ -1,0 +1,103 @@
+LAUNCH INSTRUCTIONS - 2026-10-18
+================================
+
+Two experiment sets, both using the current code: tightened per-entry
+sensitivities, free diagonal refinement, and the diagonal noise floor.
+
+
+SETUP
+-----
+
+    cd /path/to/private-ggm
+    git checkout main && git pull
+
+Only if the repo and conda env are not at the cluster defaults
+(/mnt/nfs/work1/sheldon/cferrando/private-ggm and .../conda_env):
+
+    export PRIVATE_GGM_REPO=/path/to/private-ggm
+    export PRIVATE_GGM_CONDA=/path/to/conda_env
+
+
+1. FLOOR EXPERIMENT - 12 DATASETS
+---------------------------------
+
+12 jobs, one per dataset. Output: results/floor_12datasets/
+
+    ./privateggm/sbatch/floor_12datasets/submit_all.sh
+
+Or one dataset at a time:
+
+    sbatch privateggm/sbatch/floor_12datasets/sbatch_floor_adult.sh
+
+Datasets: adult, SeoulBikeData, LifeExpectancy, Parkinsons, thyroid_ann,
+ibm, pol_reg, bank32nh, Ailerons, spambase, communities_crime, madeline.
+
+Settings: rho in {1e-4, 1e-3, 1e-2, 1e-1, 1, 2, 10}, 10 trials,
+alpha=0.3, beta=0.5, max-rounds-pct 2.0, seed 42, --random-baseline,
+--diag-noise-floor. madeline uses ipm_chol_sparse and 64G; everything
+else uses ipm_chol and 32G.
+
+Each job also produces the SSP, AdaSSP, diagonal-only and random-selection
+baselines - no extra flag needed.
+
+AdaptiveCov does NOT need rerunning. results/privcovariance_baselines/
+already covers all 12 datasets (7 rho x 10 trials) and comes from the
+external PrivateCovariance repo, which the sensitivity and floor changes
+do not touch. sbatch_adaptivecov_12datasets.sh is there if you ever want
+to regenerate it; it is not part of submit_all.sh.
+
+Runtime scales steeply with d. Small datasets finish in minutes,
+communities_crime takes about an hour, madeline is the long pole.
+
+
+2. ALPHA/BETA GRID ABLATION
+---------------------------
+
+45 jobs: 9 cells (alpha, beta each in {0.1, 0.3, 0.5}) x 5 datasets.
+Output: results/ab_grid_floor/a{01,03,05}_b{01,03,05}/ipm_solver/
+
+    ./privateggm/sbatch/ab_grid_floor/submit_all.sh
+
+Or one cell/dataset at a time:
+
+    sbatch privateggm/sbatch/ab_grid_floor/sbatch_grid_a01_b01_adult.sh
+
+Datasets: adult (d=6), LifeExpectancy (15), ibm (23), bank32nh (33),
+spambase (58).
+
+Settings: same 7 rho values, 5 trials, max-rounds-pct 2.0, ipm_chol, 32G,
+seed 42, --diag-noise-floor. No --random-baseline.
+
+Writes to results/ab_grid_floor/, NOT results/ab_grid/. The filenames are
+otherwise identical, so the older grid results are left intact. Those were
+produced by the pre-sensitivity-change code and cannot be regenerated from
+the current tree.
+
+
+MONITORING
+----------
+
+    squeue -u $USER
+    squeue -u $USER | wc -l          # rough count of running/queued
+    scancel <jobid>                  # cancel one
+    scancel -u $USER                 # cancel everything
+
+Slurm logs are written as exp_<jobid>.out in the directory the job was
+submitted from.
+
+
+NOTES
+-----
+
+Both submit_all.sh scripts cd to their own directory first, so they work
+from anywhere. The two sets write to separate output folders and do not
+collide with each other or with existing results.
+
+7 of the 12 dataset CSVs are untracked in git (SeoulBikeData,
+LifeExpectancy, Parkinsons, pol_reg, Ailerons, spambase, madeline), so a
+fresh clone will not have them. Copy data/ across if running somewhere new.
+
+Use the dataset name SeoulBikeData, not SeoulBike. Both load identically
+(d=10, n=8760), but every stored result including the AdaptiveCov
+baselines uses SeoulBikeData, and the plotting function matches datasets
+across folders by that name.
