@@ -1,0 +1,76 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# Environment
+privateggmenv/
+venv/
+ENV/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Data and results
+data/*.csv
+data/*.json
+# The 12 benchmark datasets are tracked so a fresh clone can run the
+# experiments unchanged. Several need a companion _target.csv -- without it
+# the dataset loads silently with one fewer column (e.g. bank32nh becomes
+# d=32 instead of 33), so the pairs must be kept together.
+!data/target_columns.json
+!data/adult.csv
+!data/SeoulBikeData.csv
+!data/LifeExpectancy.csv
+!data/Parkinsons.csv
+!data/Parkinsons_target.csv
+!data/thyroid_ann.csv
+!data/ibm.csv
+!data/pol_reg.csv
+!data/pol_reg_target.csv
+!data/bank32nh.csv
+!data/bank32nh_target.csv
+!data/Ailerons.csv
+!data/Ailerons_target.csv
+!data/spambase.csv
+!data/spambase_target.csv
+!data/communities_crime.csv
+!data/madeline.csv
+!data/madeline_target.csv
+!data/indian_pines.csv
+results/
+pathologic_sigma_tilde_dp.npy
+
+CLAUDE.md
+.obsidian/
+
+# notes 
+notes/
+# lock files from concurrent L-bound computation
+data/*.lock
