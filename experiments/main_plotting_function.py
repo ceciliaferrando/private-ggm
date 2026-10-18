@@ -363,7 +363,7 @@ if __name__ == "__main__":
                     if has_compare and cmp_data is not None:
                         (rhos2, _, _, am2_m, am2_s, _, _, _, _, _, _, _, _, _, _, _, _) = load_rho_data(cmp_data, rho_values)
                         if len(rhos2) > 0:
-                            plot_line(ax0, rhos2, am2_m, am2_s, '#1f77b4',
+                            plot_line(ax0, rhos2, am2_m, am2_s, '#ff7f0e',
                                       f'PACE-GGM ({args.compare_label})', linestyle='--', clip_log=True)
 
                     if has_privcov:
@@ -433,7 +433,7 @@ if __name__ == "__main__":
                     if has_compare and cmp_data is not None:
                         (rhos2, af2_m, af2_s, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = load_rho_data(cmp_data, rho_values)
                         if len(rhos2) > 0:
-                            plot_line(ax1, rhos2, af2_m, af2_s, '#1f77b4',
+                            plot_line(ax1, rhos2, af2_m, af2_s, '#ff7f0e',
                                       f'PACE-GGM ({args.compare_label})', linestyle='--', clip_log=True)
 
                     if has_privcov:
@@ -503,7 +503,7 @@ if __name__ == "__main__":
                         if has_compare and cmp_data is not None:
                             rhos_m2, pm2, ps2, _, _, _, _, _, _ = load_mse_data(cmp_data, rho_values)
                             if len(rhos_m2) > 0:
-                                plot_line(ax2, rhos_m2, pm2, ps2, '#1f77b4',
+                                plot_line(ax2, rhos_m2, pm2, ps2, '#ff7f0e',
                                           f'PACE-GGM ({args.compare_label})', linestyle='--', marker='*')
 
                         ax2.set_xscale('log')

@@ -4,7 +4,7 @@ from math import exp, sqrt
 from scipy.special import erf
 import scipy.optimize
 from types import SimpleNamespace
-from privateggm.privacy import cov_jk_sensitivity_linf, cov_jk_sensitivity_l2, SSP_gradient, gaussian_mechanism
+from privateggm.privacy import cov_jk_sensitivity_linf, cov_jk_sensitivity_linf_diag, cov_jk_sensitivity_l2, SSP_gradient, gaussian_mechanism
 
 # ── PrivateCovariance repo wrappers ───────────────────────────────────────────
 # Clone https://github.com/hkustDB/PrivateCovariance and set this path, or
@@ -633,9 +633,11 @@ def random_selection_baseline(rng, X, Sigma_true, d, n, rho, alpha,
     empirical_cov = X_centered.T @ X_centered / n
 
     if sensitivity_type == 'linf':
-        sensitivity = cov_jk_sensitivity_linf(n, norm_bound)
+        sensitivity_diag    = cov_jk_sensitivity_linf_diag(n, norm_bound)
+        sensitivity_offdiag = cov_jk_sensitivity_linf(n, norm_bound)
     else:
-        sensitivity = cov_jk_sensitivity_l2(n, norm_bound)
+        sensitivity_diag    = cov_jk_sensitivity_l2(n, norm_bound)
+        sensitivity_offdiag = cov_jk_sensitivity_l2(n, norm_bound)
 
     rho_per_diag    = rho * alpha / d
     rho_per_offdiag = rho * (1 - alpha) / n_offdiag if n_offdiag > 0 else 0.0
@@ -645,7 +647,7 @@ def random_selection_baseline(rng, X, Sigma_true, d, n, rho, alpha,
 
     # Measure diagonal
     for i in range(d):
-        noisy_val, _, sigma = gaussian_mechanism(rng, empirical_cov[i, i], sensitivity, rho_per_diag)
+        noisy_val, _, sigma = gaussian_mechanism(rng, empirical_cov[i, i], sensitivity_diag, rho_per_diag)
         Sigma_tilde[i, i]  = noisy_val
         noise_scales[i, i] = sigma
 
@@ -656,7 +658,7 @@ def random_selection_baseline(rng, X, Sigma_true, d, n, rho, alpha,
         chosen_idx = rng.choice(len(lower_tri), size=k, replace=False)
         for idx in chosen_idx:
             i, j = lower_tri[idx]
-            noisy_val, _, sigma = gaussian_mechanism(rng, empirical_cov[i, j], sensitivity, rho_per_offdiag)
+            noisy_val, _, sigma = gaussian_mechanism(rng, empirical_cov[i, j], sensitivity_offdiag, rho_per_offdiag)
             Sigma_tilde[i, j]  = noisy_val
             Sigma_tilde[j, i]  = noisy_val
             noise_scales[i, j] = sigma

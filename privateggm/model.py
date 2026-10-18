@@ -758,13 +758,22 @@ class IterativePrivateGGM:
         self.actual_offdiag_noise_scale = None
 
     def get_sensitivity_cov_jk(self, n):
-        """Get the sensitivity for single entry measurements"""
+        """Get the sensitivity for off-diagonal entry measurements."""
         from privateggm.privacy import cov_jk_sensitivity_l2, cov_jk_sensitivity_linf
-        
         if self.sensitivity_type == 'l2':
             return cov_jk_sensitivity_l2(n, self.norm_bound)
         elif self.sensitivity_type == 'linf':
             return cov_jk_sensitivity_linf(n, self.norm_bound)
+        else:
+            raise ValueError(f"Unknown sensitivity type: {self.sensitivity_type}")
+
+    def get_sensitivity_cov_jk_diag(self, n):
+        """Get the sensitivity for diagonal entry measurements."""
+        from privateggm.privacy import cov_jk_sensitivity_l2, cov_jk_sensitivity_linf_diag
+        if self.sensitivity_type == 'l2':
+            return cov_jk_sensitivity_l2(n, self.norm_bound)
+        elif self.sensitivity_type == 'linf':
+            return cov_jk_sensitivity_linf_diag(n, self.norm_bound)
         else:
             raise ValueError(f"Unknown sensitivity type: {self.sensitivity_type}")
 
@@ -840,7 +849,7 @@ class IterativePrivateGGM:
         # TODO: Implement if needed
         
         # 2. Private diagonal entries - measure all at once
-        diag_sensitivity = self.get_sensitivity_cov_jk(n)
+        diag_sensitivity = self.get_sensitivity_cov_jk_diag(n)
         for i in range(d):
             self.Sigma_tilde[i,i], _, noise_scale = gaussian_mechanism(
                 self.rng,
@@ -1071,7 +1080,7 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
     
     def __init__(self, rng, d, rho, alpha, beta, max_rounds, sensitivity_type, norm_bound,
                  optimizer="pgd-maxent", anneal_threshold_factor=None, allow_remeasurement=True,
-                 target_budget_fraction=0.0):
+                 target_budget_fraction=0.0, diag_noise_floor=False):
         """
         Initialize Annealing Iterative Private GGM
         
@@ -1097,14 +1106,16 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
         self.max_rounds = max_rounds
         self.allow_remeasurement = allow_remeasurement
         self.target_budget_fraction = target_budget_fraction
-        
+        self.diag_noise_floor = diag_noise_floor
+
         # Annealing threshold: diff <= threshold_factor * measurement_std triggers doubling
         self.anneal_threshold_factor = anneal_threshold_factor or np.sqrt(2 / np.pi)
-        
+
         # Track per-round budgets (will be updated dynamically)
         self.rho_per_round_select = None
         self.rho_per_round_measure  = None
         self.rho_used = 0.0
+        self._diag_noise_floor_vals = {}  # stores round-0 noise scale per diagonal entry
         
     def fit(self, X, pre_centered=False):
         """
@@ -1137,7 +1148,7 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
         rho_diag_init = self.rho * self.alpha
         rho_per_diag = rho_diag_init / d
         
-        diag_sensitivity = self.get_sensitivity_cov_jk(n)
+        diag_sensitivity = self.get_sensitivity_cov_jk_diag(n)
         for i in range(d):
             self.Sigma_tilde[i,i], _, noise_scale = gaussian_mechanism(
                 self.rng,
@@ -1147,9 +1158,10 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
             )
             self.noise_scales[(i,i)] = noise_scale
             self.measurements[(i,i)] = self.Sigma_tilde[i,i]
-            self.measured_entries.add((i,i))  # Track diagonal measurements
-            self.entry_to_rounds[(i,i)] = [0]  # Round 0 for diagonal
+            self.measured_entries.add((i,i))
+            self.entry_to_rounds[(i,i)] = [0]
             self.entry_to_noise_scales[(i,i)] = [noise_scale]
+            self._diag_noise_floor_vals[i] = noise_scale  # round-0 noise scale as floor
         
         self.rho_used = rho_diag_init
         self.actual_diag_noise_scale = noise_scale
@@ -1205,7 +1217,8 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
         # ========================================
         # 3. Iterative measurements with annealing
         # ========================================
-        cov_entry_sensitivity = self.get_sensitivity_cov_jk(n)
+        cov_entry_sensitivity_offdiag = self.get_sensitivity_cov_jk(n)
+        cov_entry_sensitivity_diag    = self.get_sensitivity_cov_jk_diag(n)
         score_sensitivity = self.get_score_sensitivity(n)
         
         round_num = 0
@@ -1270,11 +1283,12 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
             # Measure with Gaussian mechanism
             # ========================================
             empirical_cov_ij = self.empirical_cov[i,j]
+            meas_sensitivity = cov_entry_sensitivity_diag if i == j else cov_entry_sensitivity_offdiag
             noisy_cov, _, new_noise_scale = gaussian_mechanism(
                 self.rng,
                 empirical_cov_ij,
-                cov_entry_sensitivity,
-                self.rho_per_round_measure 
+                meas_sensitivity,
+                self.rho_per_round_measure
             )
             self.rho_used += self.rho_per_round_measure 
             
@@ -1322,6 +1336,32 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
                       f"noisy={noisy_cov:.6f}, noise_std={new_noise_scale:.6f}")
             
             # ========================================
+            # Free diagonal refinement: when (i,j) off-diagonal is measured,
+            # (i,i) and (j,j) can be re-measured for free under the same budget
+            # (L∞ sensitivity 2*B²/n dominates B²/n, so the same noise level
+            # covers all three measurements simultaneously).
+            # ========================================
+            if i != j:
+                for k in [i, j]:
+                    free_noisy, _, free_noise_scale = gaussian_mechanism(
+                        self.rng,
+                        self.empirical_cov[k, k],
+                        cov_entry_sensitivity_diag,
+                        self.rho_per_round_measure
+                    )
+                    old_sigma2 = self.noise_scales[(k, k)] ** 2
+                    new_sigma2 = free_noise_scale ** 2
+                    updated_sigma2 = 1.0 / (1.0 / old_sigma2 + 1.0 / new_sigma2)
+                    updated_diag = ((self.measurements[(k, k)] / old_sigma2) + (free_noisy / new_sigma2)) * updated_sigma2
+                    combined_sigma = np.sqrt(updated_sigma2)
+                    self.Sigma_tilde[k, k]  = updated_diag
+                    self.measurements[(k, k)] = updated_diag
+                    self.noise_scales[(k, k)] = combined_sigma
+                    self.entry_to_rounds[(k, k)].append(round_num)
+                    self.entry_to_noise_scales[(k, k)].append(free_noise_scale)
+                    print(f"  Free diag refinement ({k},{k}): new={free_noisy:.6f} (σ={free_noise_scale:.6f}), combined σ={combined_sigma:.6f}")
+
+            # ========================================
             # Update model and check convergence
             # ========================================
             self.last_ipm_time = None
@@ -1348,7 +1388,7 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
             new_estimate = Sigma_hat_new[i,j]
             diff = np.abs(new_estimate - old_estimate)
             
-            threshold = self.anneal_threshold_factor * new_noise_scale
+            threshold = self.anneal_threshold_factor * (cov_entry_sensitivity_offdiag / np.sqrt(2 * self.rho_per_round_measure))
             print(f"MEASUREMENT UTILITY CHECK: |Δ estimate|={diff:.6f}, threshold={threshold:.6f}")
             
             # ========================================
@@ -1387,6 +1427,8 @@ class AnnealingIterativePrivateGGM(IterativePrivateGGM):
         # Convert dictionary noise_scales to numpy array
         noise_scales_array = np.zeros((self.d, self.d))
         for (i, j), scale in self.noise_scales.items():
+            if self.diag_noise_floor and i == j and i in self._diag_noise_floor_vals:
+                scale = max(scale, self._diag_noise_floor_vals[i])
             noise_scales_array[i, j] = scale
             if i != j:
                 noise_scales_array[j, i] = scale  # Ensure symmetry

@@ -29,7 +29,8 @@ def mean_sensitivity_l2_bound(n, R):
 
 
 def cov_sensitivity_linf(n, d, B):
-    return np.sqrt(2) * d * B**2 / n
+    # old: np.sqrt(2) * d * B**2 / n
+    return d * B**2 / n
 
 
 def cov_sensitivity_l2(n, R):
@@ -37,8 +38,13 @@ def cov_sensitivity_l2(n, R):
 
 
 def cov_jk_sensitivity_linf(n, B):
-    Delta_cov_jk = 2 * B**2 / n
-    return Delta_cov_jk
+    # off-diagonal sensitivity under L∞ bound
+    return 2 * B**2 / n
+
+
+def cov_jk_sensitivity_linf_diag(n, B):
+    # diagonal sensitivity under L∞ bound
+    return B**2 / n
 
 
 def cov_jk_sensitivity_l2(n, R):

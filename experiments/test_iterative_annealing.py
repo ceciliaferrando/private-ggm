@@ -21,7 +21,7 @@ from privateggm.utils import (
     mahalanobis_cov_error,
     frobenius_error
 )
-from privateggm.privacy import SSP_covariance, cov_sensitivity_l2, cov_sensitivity_linf, cov_jk_sensitivity_l2, cov_jk_sensitivity_linf, gaussian_mechanism, privatize_mean
+from privateggm.privacy import SSP_covariance, cov_sensitivity_l2, cov_sensitivity_linf, cov_jk_sensitivity_l2, cov_jk_sensitivity_linf, cov_jk_sensitivity_linf_diag, gaussian_mechanism, privatize_mean
 from privateggm.baselines import diagonal_XTy_regression, AdaSSP_linear_regression, private_min_eigenvalue_ridge_zcdp, random_selection_baseline
 
 
@@ -63,6 +63,7 @@ def run_experiment(
     private_mean=False,
     ridge_lambda=0.0,
     random_baseline=False,
+    diag_noise_floor=False,
 ):
     """
     Run annealing experiments.
@@ -345,6 +346,7 @@ def run_experiment(
                     optimizer=optimizer,
                     allow_remeasurement=allow_remeasurement,
                     target_budget_fraction=target_budget_fraction,
+                    diag_noise_floor=diag_noise_floor,
                 )
 
                 Sigma_est = model.fit(X_trial, pre_centered=private_mean and regression)
@@ -390,7 +392,7 @@ def run_experiment(
                 # Diagonal-only baseline: spend rho_cov on diagonal only (same budget as PACE-GGM/SSP).
                 # Uses Sigma_for_ssp which is computed from X_trial (privately centered when
                 # private_mean=True, empirical centering otherwise) — fair comparison.
-                diag_entry_sensitivity = cov_jk_sensitivity_l2(n, T) if sensitivity_type == 'l2' else cov_jk_sensitivity_linf(n, T)
+                diag_entry_sensitivity = cov_jk_sensitivity_l2(n, T) if sensitivity_type == 'l2' else cov_jk_sensitivity_linf_diag(n, T)
                 Sigma_diag_baseline = np.zeros_like(Sigma_true)
                 rho_per_diag_full = rho_cov / d
                 print(f"Baseline: Spending {rho_cov} budget on {d} diagonals = {rho_per_diag_full} per diagonal")
@@ -683,6 +685,8 @@ if __name__ == '__main__':
                         help='Allow remeasuring entries')
     parser.add_argument('--no-remeasurement', action='store_true', default=False,
                         help='Disable remeasuring entries (explicit flag)')
+    parser.add_argument('--diag-noise-floor', action='store_true', default=False,
+                        help='Floor diagonal noise scales passed to IPM at round-0 level')
     parser.add_argument('--output-dir', type=str, default='results/linesearch',
                         help='Output directory for results (default: results/linesearch)')
     parser.add_argument('--optimizer', type=str, default='pgd_maxent_solver',
@@ -762,4 +766,5 @@ if __name__ == '__main__':
         private_mean=args.private_mean,
         ridge_lambda=args.ridge_lambda,
         random_baseline=args.random_baseline,
+        diag_noise_floor=args.diag_noise_floor,
     )
