@@ -18,16 +18,47 @@ Only if the repo and conda env are not at the cluster defaults
     export PRIVATE_GGM_CONDA=/path/to/conda_env
 
 
+NO SLURM? (e.g. running on a mac)
+---------------------------------
+
+Use run_local.sh instead of submit_all.sh. It runs the same jobs in
+parallel as plain processes:
+
+    ./privateggm/sbatch/floor_12datasets/run_local.sh
+    ./privateggm/sbatch/ab_grid_floor/run_local.sh
+
+Concurrency defaults to 4; override with JOBS:
+
+    JOBS=8 ./privateggm/sbatch/ab_grid_floor/run_local.sh
+
+Per-job logs go to a logs/ subdirectory next to the scripts. After it
+finishes, check for failures with:
+
+    grep -l Traceback privateggm/sbatch/*/logs/*.log
+
+The sbatch_*.sh files are ordinary bash scripts -- the #SBATCH lines are
+just comments -- so run_local.sh executes exactly what slurm would have.
+A single job can also be run directly with no slurm involved:
+
+    bash privateggm/sbatch/floor_12datasets/sbatch_floor_adult.sh
+
+run_local.sh pins each process to one BLAS thread (OMP_NUM_THREADS=1 and
+friends). Without that, every parallel numpy job tries to use all cores
+and they thrash. Parallelism comes from running several jobs at once.
+
+
 1. FLOOR EXPERIMENT - 12 DATASETS
 ---------------------------------
 
 12 jobs, one per dataset. Output: results/floor_12datasets/
 
-    ./privateggm/sbatch/floor_12datasets/submit_all.sh
+    ./privateggm/sbatch/floor_12datasets/submit_all.sh     # slurm
+    ./privateggm/sbatch/floor_12datasets/run_local.sh      # no slurm
 
 Or one dataset at a time:
 
     sbatch privateggm/sbatch/floor_12datasets/sbatch_floor_adult.sh
+    bash   privateggm/sbatch/floor_12datasets/sbatch_floor_adult.sh
 
 Datasets: adult, SeoulBikeData, LifeExpectancy, Parkinsons, thyroid_ann,
 ibm, pol_reg, bank32nh, Ailerons, spambase, communities_crime, madeline.
@@ -56,11 +87,13 @@ communities_crime takes about an hour, madeline is the long pole.
 45 jobs: 9 cells (alpha, beta each in {0.1, 0.3, 0.5}) x 5 datasets.
 Output: results/ab_grid_floor/a{01,03,05}_b{01,03,05}/ipm_solver/
 
-    ./privateggm/sbatch/ab_grid_floor/submit_all.sh
+    ./privateggm/sbatch/ab_grid_floor/submit_all.sh        # slurm
+    ./privateggm/sbatch/ab_grid_floor/run_local.sh         # no slurm
 
 Or one cell/dataset at a time:
 
     sbatch privateggm/sbatch/ab_grid_floor/sbatch_grid_a01_b01_adult.sh
+    bash   privateggm/sbatch/ab_grid_floor/sbatch_grid_a01_b01_adult.sh
 
 Datasets: adult (d=6), LifeExpectancy (15), ibm (23), bank32nh (33),
 spambase (58).
@@ -101,3 +134,10 @@ Use the dataset name SeoulBikeData, not SeoulBike. Both load identically
 (d=10, n=8760), but every stored result including the AdaptiveCov
 baselines uses SeoulBikeData, and the plotting function matches datasets
 across folders by that name.
+
+MONITORING WITHOUT SLURM
+------------------------
+
+    ps aux | grep test_iterative_annealing | grep -v grep   # what's running
+    tail -f privateggm/sbatch/*/logs/<script>.sh.log        # follow one job
+    pkill -f test_iterative_annealing                       # stop everything
