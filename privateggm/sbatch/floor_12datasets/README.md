@@ -39,8 +39,20 @@ automatically — no extra flag needed.
 | bank32nh | 33 | 32G | 2.0 | ipm_chol |
 | Ailerons | 34 | 32G | 2.0 | ipm_chol |
 | spambase | 58 | 32G | 2.0 | ipm_chol |
+| BreastCancerWisconsin | 32 | 32G | 2.0 | ipm_chol |
 | communities_crime | 102 | 32G | 2.0 | ipm_chol |
+| indian_pines | 187 | 64G | 2.0 | ipm_chol_sparse |
 | madeline | 260 | 64G | 2.0 | ipm_chol_sparse |
+
+(The folder name says 12; it is 14. BreastCancerWisconsin and indian_pines
+were added later, after they turned out to be needed for the paper figures.)
+
+**`ipm_chol_sparse` needs `scikit-sparse`.** indian_pines and madeline both
+use it. If `sksparse` is missing the failure is quiet: every trial raises
+`No module named 'sksparse'`, the experiment loop catches it per trial, and
+the job exits 0 having written a results file with zero trials in it. Check
+the trial counts, not the exit code. The cluster conda env does not have it;
+the mac mini does.
 
 `max-rounds-pct` is uniform at 2.0. It is not binding for any dataset here —
 the privacy budget is exhausted first — so the value is effectively
