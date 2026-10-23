@@ -1,7 +1,11 @@
 {
-  "adult": null,
+  "adult": "age",
+  "SeoulBikeData": "Rented Bike Count",
+  "LifeExpectancy": "Life_expectancy",
   "thyroid_ann": null,
-  "ibm": null,
+  "ibm": "22",
+  "pol_reg": null,
   "bank32nh": null,
+  "Ailerons": null,
   "communities_crime": "ViolentCrimesPerPop"
 }

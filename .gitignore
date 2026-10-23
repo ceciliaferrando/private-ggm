@@ -74,3 +74,6 @@ CLAUDE.md
 notes/
 # lock files from concurrent L-bound computation
 data/*.lock
+
+# slurm job logs
+exp_*.out
