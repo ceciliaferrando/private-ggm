@@ -17,6 +17,12 @@ CONDA=${PRIVATE_GGM_CONDA:-/mnt/nfs/work1/sheldon/cferrando/conda_env}
 cd "$REPO"
 source "$CONDA/bin/activate"
 
+# privateggm is editable-installed pointing at /tmp/neurips_test_scratch (node-local,
+# stale). Invoking the benchmark by script path puts experiments/ at sys.path[0]
+# rather than the cwd, so that stale copy would win; PYTHONPATH puts the repo first.
+# The script's own sys.path hack does not help: it adds the repo's PARENT.
+export PYTHONPATH="$REPO:$PYTHONPATH"
+
 python -u experiments/benchmark_sparse_vs_dense.py \
     --output "$REPO/results/cr_stress_test/sparse_vs_dense_results.pkl" \
     --seeds 1
