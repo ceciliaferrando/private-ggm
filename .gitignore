@@ -40,7 +40,7 @@ ENV/
 # Data and results
 data/*.csv
 data/*.json
-# The 12 benchmark datasets are tracked so a fresh clone can run the
+# The 14 benchmark datasets are tracked so a fresh clone can run the
 # experiments unchanged. Several need a companion _target.csv -- without it
 # the dataset loads silently with one fewer column (e.g. bank32nh becomes
 # d=32 instead of 33), so the pairs must be kept together.
@@ -54,6 +54,7 @@ data/*.json
 !data/ibm.csv
 !data/pol_reg.csv
 !data/pol_reg_target.csv
+!data/BreastCancerWisconsin.csv
 !data/bank32nh.csv
 !data/bank32nh_target.csv
 !data/Ailerons.csv
