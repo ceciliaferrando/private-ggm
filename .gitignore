@@ -77,3 +77,19 @@ data/*.lock
 
 # slurm job logs
 exp_*.out
+
+# Slurm launch scripts and job output: machine- and account-specific, and
+# superseded by the commands recorded in SOURCES.md
+privateggm/sbatch/
+privateggm/sbatch*.sh
+*.out
+slurm-*.out
+*.log
+
+# Scratch artifacts
+*.npy
+*.zip
+/adult_ipm_complete.*
+/main_plotting_function.py
+target_columns.json
+!data/target_columns.json
