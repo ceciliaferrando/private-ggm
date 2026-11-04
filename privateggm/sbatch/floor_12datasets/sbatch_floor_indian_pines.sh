@@ -14,6 +14,8 @@ CONDA=${PRIVATE_GGM_CONDA:-/mnt/nfs/work1/sheldon/cferrando/conda_env}
 cd "$REPO"
 source "$CONDA/bin/activate"
 
+# ipm_chol_sparse needs scikit-sparse. Without it every trial raises, the loop
+# catches it per trial, and the job exits 0 with an empty results file.
 python -m experiments.test_iterative_annealing \
     --data-type real \
     --data-name indian_pines \

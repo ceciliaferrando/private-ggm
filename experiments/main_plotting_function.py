@@ -223,6 +223,10 @@ if __name__ == "__main__":
                         help='Add MSE row')
     parser.add_argument('--mse-only', action='store_true', default=False,
                         help='Show only MSE row (implies --regression)')
+    parser.add_argument('--no-ssp', action='store_true', default=False,
+                        help='Drop the SSP line from the MSE row. SSP diverges at '
+                             'small rho and dominates the y-range, which flattens '
+                             'the PACE-GGM vs AdaSSP comparison')
     parser.add_argument('--compare-folder', type=str, default=None,
                         help='Second folder to overlay (dashed lines)')
     parser.add_argument('--compare-label', type=str, default='private mean',
@@ -496,7 +500,8 @@ if __name__ == "__main__":
                     rhos_m, pm, ps, sm_v, ss, dm, ds_v, am, as_v = load_mse_data(data, rho_values)
                     if len(rhos_m) > 0:
                         plot_line(ax2, rhos_m, pm,   ps,   '#1f77b4', 'PACE-GGM', marker='o', zorder=10)
-                        plot_line(ax2, rhos_m, sm_v, ss,   '#d62728', 'SSP',      marker='s')
+                        if not args.no_ssp:
+                            plot_line(ax2, rhos_m, sm_v, ss, '#d62728', 'SSP', marker='s')
                         if not np.all(np.isnan(am)):
                             plot_line(ax2, rhos_m, am, as_v, '#9467bd', 'AdaSSP',   marker='D', linestyle=':')
 
@@ -511,9 +516,13 @@ if __name__ == "__main__":
                             ax2.set_yscale('log')
                         finite_vals = [v for v in list(pm) + list(am) if np.isfinite(v) and v > 0]
                         if finite_vals:
-                            ax2.set_ylim(bottom=min(finite_vals) * 0.5,
-                                         top=min(np.nanmax(sm_v) * 1.05 if not np.all(np.isnan(sm_v)) else np.inf,
-                                                 np.nanmax(finite_vals) * 10))
+                            # Without SSP the range is set by the two curves that
+                            # remain, so the axis can close in on them.
+                            top = (max(finite_vals) * 1.15 if args.no_ssp else
+                                   min(np.nanmax(sm_v) * 1.05
+                                       if not np.all(np.isnan(sm_v)) else np.inf,
+                                       np.nanmax(finite_vals) * 10))
+                            ax2.set_ylim(bottom=min(finite_vals) * 0.85, top=top)
                         if mse_only and plot_idx == 0:
                             ax2.legend(loc='best', fontsize=7, framealpha=0.9,
                                        handlelength=2, borderpad=0.5)
